@@ -4,6 +4,7 @@ import com.nuvio.app.core.storage.DesktopStorage
 import com.nuvio.app.core.network.DesktopIPv4FirstDns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -15,10 +16,16 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
 import org.jetbrains.compose.resources.getString
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 internal actual object AddonStorage {
     private val store = DesktopStorage.store("nuvio_addons")
@@ -116,18 +123,31 @@ actual suspend fun httpRequestRaw(
     }
     val request = buildDesktopRequest(method, url, headers, body, bodyBytes)
 
-    client.newCall(request).execute().use { response ->
-        RawHttpResponse(
-            status = response.code,
-            statusText = response.message,
-            url = response.request.url.toString(),
-            body = readResponseBodyLimited(response.body, maxResponseBodyBytes),
-            headers = response.headers.toMultimap().mapValues { (_, values) ->
-                values.joinToString(",")
-            }.mapKeys { (name, _) ->
-                name.lowercase()
-            },
-        )
+    suspendCancellableCoroutine { continuation ->
+        val call = client.newCall(request)
+        continuation.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, error: IOException) {
+                continuation.resumeWithException(error)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                try {
+                    response.use {
+                        continuation.resume(RawHttpResponse(
+                            status = it.code,
+                            statusText = it.message,
+                            url = it.request.url.toString(),
+                            body = readResponseBodyLimited(it.body, maxResponseBodyBytes),
+                            headers = it.headers.toMultimap().mapValues { (_, values) -> values.joinToString(",") }
+                                .mapKeys { (name, _) -> name.lowercase() },
+                        ))
+                    }
+                } catch (error: Exception) {
+                    continuation.resumeWithException(error)
+                }
+            }
+        })
     }
 }
 

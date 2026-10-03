@@ -6,6 +6,7 @@ import com.dokar.quickjs.binding.asyncFunction
 import com.nuvio.app.features.addons.httpRequestRaw
 import com.nuvio.app.features.plugins.runtime.host.HostModule
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -29,8 +30,15 @@ internal class FetchBridge : HostModule {
             val bodyKind = args.getOrNull(3)?.toString() ?: "none"
             val body = args.getOrNull(4)?.toString() ?: ""
             val followRedirects = args.getOrNull(5) as? Boolean ?: true
+            val timeoutMs = (args.getOrNull(6) as? Number)?.toLong()?.takeIf { it > 0 }
             try {
-                performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects)
+                if (timeoutMs == null) {
+                    performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects)
+                } else {
+                    withTimeoutOrNull(timeoutMs) {
+                        performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects)
+                    } ?: error("Fetch timed out")
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (t: Throwable) {

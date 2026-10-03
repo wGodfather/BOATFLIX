@@ -1,4 +1,9 @@
-# BOATFLIX 1.34 — Windows kaynak düzeltmesi
+# BOATFLIX 1.35 — Windows kaynak listesi hızlandırması
+
+- Başlık, yıl/bölüm, boyut, çözünürlük ve seeder bilgisi yeterli olan torrentler video indirme kontrolünü beklemeden listelenir.
+- Yavaş veya yanıt vermeyen bir torrent, kaynak bilgisi tam olan diğer torrentlerin gösterilmesini engellemez.
+- BOAT eklentisinin alt kaynak isteklerine koyduğu süre sınırları uygulanır; takılan HTTP istekleri iptal edilir.
+- Sağlayıcının bildirdiği kaynak bilgisi gerçek video ölçümüyle karıştırılmaz; yalnızca ölçülmüş videolar doğrulanmış görünür.
 
 - Nuvio ile aynı anda çalışırken torrent sunucusunun paylaşılmasına bağlı kaynak doğrulama sorunu giderildi.
 - Eşzamanlı kaynak kontrollerinin torrent sunucusunu birden fazla kez başlatması engellendi.
@@ -7,7 +12,7 @@
 - Kaynak doğrulamada elenen sonuçların nedenleri `logs/source-verification.log` dosyasına yazılır.
 - Kaynakların çözünürlük, boyut, seeder ve içerik eşleştirme kuralları korunur.
 
-Windows kurulum dosyası: `BOATFLIX-Windows-x64-1.34.msi`.
+Windows kurulum dosyası: `BOATFLIX-Windows-x64-1.35.msi`.
 Önceki BOATFLIX kurulumu yükseltilir; yerel profiller ve eklenti ayarları korunur.
 
 ## Önceki sürüm: BOATFLIX 1.32

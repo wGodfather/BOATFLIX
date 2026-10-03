@@ -2,7 +2,7 @@
 
 Ana depo: https://github.com/wGodfather/BOATFLIX. Ana dal: `main`.
 Sürüm `composeApp/Configuration/DesktopVersion.properties` içinde tanımlanır.
-Güncel kaynak sürümü `1.34`, derleme kodu `134` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
+Güncel kaynak sürümü `1.35`, derleme kodu `135` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
 
 ## Bağımsız kimlik
 
@@ -22,6 +22,13 @@ kullanır ve kapatır. Eşzamanlı başlatma işlemleri sıralanır.
 1.34 her sunucunun veritabanını `torrserver/instances/<port>` altında ayırır.
 Eski sürümün kök klasörde açık tuttuğu `config.db` yeni sunucuyu engellemez;
 kök klasördeki `settings.json` ilk başlatmada yeni sunucu klasörüne kopyalanır.
+1.35 tam kaynak bilgisi olan torrentleri listeye eklemeden önce torrent parçaları
+indirmez. Başlık/yıl/bölüm eşleşmesi, bildirilen boyut, çözünürlük ve seeder eşikleri
+uygulanır. Bu adaylar ölçülmüş video gibi işaretlenmez; `verifiedMedia` doldurulmaz.
+Eksik bilgili torrentler ve doğrudan video kaynakları ölçüm yolunu kullanır.
+Eklentilerin `AbortSignal.timeout` süre sınırları yerel HTTP isteklerine uygulanır.
+Masaüstünde süre aşımında gerçek ağ isteği iptal edilir; yavaş alt kaynaklar BOAT'ın
+diğer sonuçlarını genel eklenti süre sınırına kadar bekletmez.
 Kaynak doğrulama ret nedenleri ayar klasöründeki `logs/source-verification.log` dosyasına
 yazılır. Bu dosya 1 MiB ile sınırlıdır; kaynak URL'leri ve istek başlıkları kaydedilmez.
 

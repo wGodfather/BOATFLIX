@@ -127,8 +127,26 @@ internal object JsBindings {
             var headers = __normalize_fetch_headers(options.headers);
             var body = __normalize_fetch_body(options.body);
             var followRedirects = options.redirect !== 'manual';
-            var result = await __native_fetch(url, method, JSON.stringify(headers), body.kind, body.value, followRedirects);
+            var signal = options.signal;
+            if (signal && signal.aborted) {
+                var abortError = new Error('The request was aborted');
+                abortError.name = 'AbortError';
+                throw abortError;
+            }
+            var remainingMs = signal && signal.__fetchDeadlineMs !== undefined
+                ? Math.ceil(signal.__fetchDeadlineMs - Date.now()) : 0;
+            if (signal && signal.__fetchDeadlineMs !== undefined && remainingMs <= 0) {
+                var expiredError = new Error('Fetch timed out');
+                expiredError.name = 'TimeoutError';
+                throw expiredError;
+            }
+            var result = await __native_fetch(url, method, JSON.stringify(headers), body.kind, body.value, followRedirects, remainingMs);
             var parsed = JSON.parse(result);
+            if (parsed.status === 0 && parsed.statusText === 'Fetch timed out') {
+                var timeoutError = new Error('Fetch timed out');
+                timeoutError.name = 'TimeoutError';
+                throw timeoutError;
+            }
             var responseBytes = __fetch_base64_to_bytes(parsed.bodyBase64);
             return {
                 ok: parsed.ok,
@@ -179,6 +197,16 @@ internal object JsBindings {
                 return true;
             };
             globalThis.AbortSignal = AbortSignal;
+        }
+
+        if (typeof AbortSignal.timeout !== 'function') {
+            AbortSignal.timeout = function(milliseconds) {
+                milliseconds = Number(milliseconds);
+                if (!Number.isFinite(milliseconds) || milliseconds < 0) throw new RangeError('Invalid timeout');
+                var signal = new AbortSignal();
+                signal.__fetchDeadlineMs = Date.now() + milliseconds;
+                return signal;
+            };
         }
 
         if (typeof AbortController === 'undefined') {

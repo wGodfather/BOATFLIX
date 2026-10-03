@@ -156,7 +156,7 @@ object StreamsRepository {
                     meta?.runtime?.let { Regex("[0-9]+").find(it)?.value?.toIntOrNull() })
                 val prepared = if (StreamSourceVerifier.enabled) StreamSourceVerifier.prepareContext(context) else context
                 publishEligibleStreams(embeddedStreams,
-                    verify = { stream -> if (StreamSourceVerifier.enabled) StreamSourceVerifier.verify(stream, prepared) else stream },
+                    verify = { stream -> if (StreamSourceVerifier.enabled) prepareStreamForListing(stream, prepared) else stream },
                     publish = { stream ->
                         _uiState.update { current ->
                             if (current.requestToken != requestToken) current else current.copy(groups = listOf(group.copy(
@@ -465,7 +465,7 @@ object StreamsRepository {
                         )
                         publishEligibleStreams(
                             streams = streams,
-                            verify = { stream -> if (StreamSourceVerifier.enabled) StreamSourceVerifier.verify(stream, verificationContext.await()) else stream },
+                            verify = { stream -> if (StreamSourceVerifier.enabled) prepareStreamForListing(stream, verificationContext.await()) else stream },
                             publish = { verified -> publishCompletion(StreamLoadCompletion.Addon(AddonStreamGroup(
                                 addonName = displayName, addonId = addon.addonId,
                                 streams = listOf(verified), isLoading = true,
@@ -519,7 +519,7 @@ object StreamsRepository {
                                 ) }.sortedBySizeAndQuality()
                                 publishEligibleStreams(
                                     streams = streams,
-                                    verify = { stream -> if (StreamSourceVerifier.enabled) StreamSourceVerifier.verify(stream, verificationContext.await()) else stream },
+                                    verify = { stream -> if (StreamSourceVerifier.enabled) prepareStreamForListing(stream, verificationContext.await()) else stream },
                                     publish = { verified ->
                                         publishCompletion(StreamLoadCompletion.PluginScraper(
                                             addonId = providerGroup.addonId, streams = listOf(verified), error = null, isFinal = false,

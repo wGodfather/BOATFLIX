@@ -9,6 +9,34 @@ import kotlin.test.*
 
 /** Explicitly enabled live check; normal CI does not depend on public source services. */
 class DesktopBoatTorrentSmokeTest {
+    @Test fun `boat candidates publish promptly even when other torrent checks are blocked`() = runBlocking {
+        val providerFile = System.getenv("BOATFLIX_SMOKE_PROVIDER_FILE")
+        assumeTrue("Set BOATFLIX_SMOKE_PROVIDER_FILE to run the live source check", !providerFile.isNullOrBlank())
+        val started = System.nanoTime()
+        val code = File(providerFile!!).readText()
+        val results = PluginRuntime.executePlugin(code, "tt22084616", "movie", null, null, "boat-listing-smoke", false)
+        val scraper = PluginScraper("boat-listing-smoke", "local-smoke", "B.O.A.T", "", "smoke", "boat.js",
+            listOf("movie"), true, true, code = code)
+        val context = StreamSourceVerifier.prepareContext(StreamVerificationContext("movie", "tt22084616",
+            listOf("Spider-Man: Brand New Day", "Örümcek-Adam: Yepyeni Bir Gün"), year = 2026))
+        val streams = results.map { it.toStreamItem(scraper) }.sortedBySizeAndQuality()
+        val expected = streams.count { it.hasCompleteTorrentListingMetadata(context) }
+        assertTrue(expected >= 8, "Expected at least the eight BOAT candidates shown by Nuvio")
+        val afterProvider = System.nanoTime()
+        val published = mutableListOf<StreamItem>()
+        val ready = CompletableDeferred<Unit>()
+        val job = launch {
+            publishEligibleStreams(streams, verify = { stream ->
+                prepareStreamForListing(stream, context) { _, _ -> awaitCancellation() }
+            }, publish = { published += it; if (published.size == expected) ready.complete(Unit) })
+        }
+        try {
+            withTimeout(2000) { ready.await() }
+            println("BOAT_LISTING providerAndContextMs=${(afterProvider-started)/1_000_000} publicationMs=${(System.nanoTime()-afterProvider)/1_000_000} results=${results.size} visibleTorrents=${published.size}")
+            assertTrue(published.all { it.verifiedMedia == null })
+        } finally { job.cancelAndJoin() }
+    }
+
     @Test fun `boat torrent survives the Windows source listing pipeline`() = runBlocking {
         val providerFile = System.getenv("BOATFLIX_SMOKE_PROVIDER_FILE")
         assumeTrue("Set BOATFLIX_SMOKE_PROVIDER_FILE to run the live source check", !providerFile.isNullOrBlank())
