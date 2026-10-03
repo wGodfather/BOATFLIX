@@ -2,7 +2,7 @@
 
 Ana depo: https://github.com/wGodfather/BOATFLIX. Ana dal: `main`.
 Sürüm `composeApp/Configuration/DesktopVersion.properties` içinde tanımlanır.
-Güncel sürüm `1.32`, derleme kodu `132` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
+Güncel kaynak sürümü `1.33`, derleme kodu `133` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
 
 ## Bağımsız kimlik
 
@@ -15,6 +15,12 @@ Güncel sürüm `1.32`, derleme kodu `132` olur. Sonraki sürümlerde sürüm ve
 - Güncelleme deposu: `wGodfather/BOATFLIX`.
 
 Nuvio kimlikleri ve ayar klasörleriyle paylaşım yapılmaz. Nuvio verileri otomatik taşınmaz.
+
+1.33 masaüstünde torrent sunucusunu da ayırır: tercih edilen yerel port `8092` olur;
+bu port doluysa boş bir yerel port seçilir. Uygulama yalnızca kendi başlattığı sunucuyu
+kullanır ve kapatır. Eşzamanlı başlatma işlemleri sıralanır.
+Kaynak doğrulama ret nedenleri ayar klasöründeki `logs/source-verification.log` dosyasına
+yazılır. Bu dosya 1 MiB ile sınırlıdır; kaynak URL'leri ve istek başlıkları kaydedilmez.
 
 ## Windows derleme
 

@@ -1,4 +1,15 @@
-# BOATFLIX 1.32
+# BOATFLIX 1.33 — Windows kaynak düzeltmesi
+
+- Nuvio ile aynı anda çalışırken torrent sunucusunun paylaşılmasına bağlı kaynak doğrulama sorunu giderildi.
+- Eşzamanlı kaynak kontrollerinin torrent sunucusunu birden fazla kez başlatması engellendi.
+- BOATFLIX yalnızca kendi torrent sunucusunu kullanır ve kapatır; dolu portta boş bir yerel port seçer.
+- Kaynak doğrulamada elenen sonuçların nedenleri `logs/source-verification.log` dosyasına yazılır.
+- Kaynakların çözünürlük, boyut, seeder ve içerik eşleştirme kuralları korunur.
+
+Windows kurulum dosyası: `BOATFLIX-Windows-x64-1.33.msi`.
+Önceki BOATFLIX kurulumu yükseltilir; yerel profiller ve eklenti ayarları korunur.
+
+## Önceki sürüm: BOATFLIX 1.32
 
 Windows, Linux, Android mobil, Android TV ve Google TV indirmeleri.
 

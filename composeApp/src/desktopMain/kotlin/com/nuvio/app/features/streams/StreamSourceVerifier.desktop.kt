@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.DigestInputStream
 import java.security.MessageDigest
+import java.time.Instant
 
 internal actual object StreamSourceVerifier {
     actual val enabled = System.getProperty("os.name").contains("windows", ignoreCase = true)
@@ -33,6 +34,21 @@ internal actual object StreamSourceVerifier {
     private val contexts = java.util.concurrent.ConcurrentHashMap<String, StreamVerificationContext>()
     private data class CacheEntry(val stream: StreamItem, val checkedAt: Long)
     private val cache = java.util.concurrent.ConcurrentHashMap<String, CacheEntry>()
+    private val diagnosticLock = Any()
+
+    private fun rejected(stream: StreamItem, context: StreamVerificationContext, reason: String): StreamItem? {
+        // Keep authentication headers and signed media URLs out of diagnostics.
+        runCatching {
+            synchronized(diagnosticLock) {
+                val file = DesktopStorage.rootDir.resolve("logs/source-verification.log").toFile()
+                file.parentFile.mkdirs()
+                if (file.length() > 1_048_576L) file.writeText("")
+                fun clean(value: String) = value.replace('\r', ' ').replace('\n', ' ').take(200)
+                file.appendText("${Instant.now()} | ${clean(context.videoId)} | ${clean(stream.addonName)} | ${if (stream.isTorrentStream) "torrent" else "direct"} | ${clean(reason)}\n")
+            }
+        }
+        return null
+    }
     private val probeExecutable: String by lazy {
         System.getProperty("nuvio.ffprobe.path")?.takeIf { File(it).isFile }
             ?: installBundledProbe() ?: "ffprobe"
@@ -104,9 +120,13 @@ internal actual object StreamSourceVerifier {
             if (verified != null) {
                 if (cache.size > 500) cache.clear()
                 cache[key] = CacheEntry(verified, System.currentTimeMillis())
+            } else {
+                rejected(stream, context, "Verification did not produce usable media before its deadline")
             }
             verified
-        } catch (error: CancellationException) { throw error } catch (_: Exception) { null }
+        } catch (error: CancellationException) { throw error } catch (error: Exception) {
+            rejected(stream, context, "Verification failed: ${error.javaClass.simpleName}")
+        }
         }
     }
 
@@ -115,8 +135,10 @@ internal actual object StreamSourceVerifier {
         P2pStreamingEngine.incrementActiveDownloads()
         try {
             P2pStreamingEngine.ensureTorrServerRunning()
-            val magnet = stream.torrentMagnetUri ?: stream.p2pInfoHash?.let { P2pStreamingEngine.buildP2pMagnet(it, stream.p2pTrackers) } ?: return null
-            hash = P2pStreamingEngine.addTorrent(magnet) ?: return null
+            val magnet = stream.torrentMagnetUri ?: stream.p2pInfoHash?.let { P2pStreamingEngine.buildP2pMagnet(it, stream.p2pTrackers) }
+                ?: return rejected(stream, context, "Torrent identifier is missing")
+            hash = P2pStreamingEngine.addTorrent(magnet)
+                ?: return rejected(stream, context, "TorrServer could not add the torrent")
             var files = P2pStreamingEngine.torrentFiles(hash)
             val deadline = System.currentTimeMillis() + 25_000L
             while (files.isEmpty() && System.currentTimeMillis() < deadline) {
@@ -126,10 +148,12 @@ internal actual object StreamSourceVerifier {
             val candidates = files.filter { it.length > 0 && it.path.substringAfterLast('.').lowercase() in setOf("mkv", "mp4", "avi", "webm", "ts", "m4v", "mov") && matchesVerifiedContent(it.path, context) }
             val file = if (stream.p2pFileIdx != null) candidates.firstOrNull { it.id == stream.p2pFileIdx!! + 1 }
                 else candidates.maxByOrNull { it.length }
-            if (file == null) return null
-            if (file.length < StreamListingPolicy.minimumTorrentBytes) return null
-            val media = probe(P2pStreamingEngine.getTorrentStreamUrl(hash, file.id), emptyMap()) ?: return null
-            if (!durationMatches(media, context)) return null
+            if (file == null) return rejected(stream, context,
+                if (files.isEmpty()) "Torrent file metadata was not available within 25 seconds" else "No video file matched the requested title and episode")
+            if (file.length < StreamListingPolicy.minimumTorrentBytes) return rejected(stream, context, "Torrent video is below the minimum file size")
+            val media = probe(P2pStreamingEngine.getTorrentStreamUrl(hash, file.id), emptyMap())
+                ?: return rejected(stream, context, "Torrent video probe failed")
+            if (!durationMatches(media, context)) return rejected(stream, context, "Torrent video duration did not match the requested content")
             return verifiedPresentation(stream.copy(fileIdx = file.id - 1, behaviorHints = stream.behaviorHints.copy(filename = file.path.substringAfterLast('/'), videoSize = file.length)), media.copy(sizeBytes = file.length))
         } finally {
             withContext(NonCancellable) { hash?.let { P2pStreamingEngine.dropTorrent(it) }; P2pStreamingEngine.decrementActiveDownloads() }
@@ -137,10 +161,13 @@ internal actual object StreamSourceVerifier {
     }
 
     private suspend fun verifyDirect(stream: StreamItem, context: StreamVerificationContext): StreamItem? {
-        val url = stream.playableDirectUrl?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
-        val media = probe(url, stream.behaviorHints.proxyHeaders?.request.orEmpty()) ?: return null
-        if (!durationMatches(media, context)) return null
-        if (!media.contentTitle.isNullOrBlank() && !matchesVerifiedContent(media.contentTitle, context.copy(year = null))) return null
+        val url = stream.playableDirectUrl?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+            ?: return rejected(stream, context, "Direct media URL is missing")
+        val media = probe(url, stream.behaviorHints.proxyHeaders?.request.orEmpty())
+            ?: return rejected(stream, context, "Direct video probe failed")
+        if (!durationMatches(media, context)) return rejected(stream, context, "Direct video duration did not match the requested content")
+        if (!media.contentTitle.isNullOrBlank() && !matchesVerifiedContent(media.contentTitle, context.copy(year = null)))
+            return rejected(stream, context, "Direct video title did not match the requested content")
         // A direct source was requested with the content ID; when the container carries
         // a title, also require it to agree. Never treat a generic provider name as a title.
         return verifiedPresentation(stream, media)
