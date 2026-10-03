@@ -409,7 +409,15 @@ actual object P2pStreamingEngine {
                 binaryFile.setExecutable(true)
             }
 
-            val configDir = configDirectory.also { it.mkdirs() }
+            // bbolt locks config.db for the lifetime of the server. Different ports
+            // must also have different databases, including an old server still
+            // running directly in the storage root after an application upgrade.
+            val configDir = configDirectory.resolve("instances/$port").also { it.mkdirs() }
+            val settings = configDir.resolve("settings.json")
+            val previousSettings = configDirectory.resolve("settings.json")
+            if (!settings.exists() && previousSettings.isFile) {
+                previousSettings.copyTo(settings)
+            }
             val processBuilder = ProcessBuilder(
                 binaryFile.absolutePath,
                 "--port",

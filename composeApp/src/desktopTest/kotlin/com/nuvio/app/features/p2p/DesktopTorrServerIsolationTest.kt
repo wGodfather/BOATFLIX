@@ -56,15 +56,14 @@ class DesktopTorrServerIsolationTest {
         }
     }
 
-    @Test fun `stopping one instance leaves the other healthy`() = runBlocking {
+    @Test fun `instances sharing a storage root have independent databases and lifetimes`() = runBlocking {
         val firstDir = Files.createTempDirectory("boatflix-first-server-").toFile()
-        val secondDir = Files.createTempDirectory("boatflix-second-server-").toFile()
         val first = P2pStreamingEngine.TorrServerBinary(0, firstDir)
         var second: P2pStreamingEngine.TorrServerBinary? = null
         try {
             first.start()
             val firstPort = first.baseUrl.substringAfterLast(':').toInt()
-            val other = P2pStreamingEngine.TorrServerBinary(firstPort, secondDir)
+            val other = P2pStreamingEngine.TorrServerBinary(firstPort, firstDir)
             second = other
             other.start()
             assertNotEquals(first.baseUrl, other.baseUrl)
@@ -75,7 +74,23 @@ class DesktopTorrServerIsolationTest {
             first.stop()
             second?.stop()
             firstDir.deleteRecursively()
-            secondDir.deleteRecursively()
+        }
+    }
+
+    @Test fun `legacy database lock cannot block a new server`() = runBlocking {
+        val directory = Files.createTempDirectory("boatflix-legacy-db-").toFile()
+        val own = P2pStreamingEngine.TorrServerBinary(0, directory)
+        try {
+            java.io.RandomAccessFile(directory.resolve("config.db"), "rw").use { legacy ->
+                legacy.channel.lock().use {
+                    own.start()
+                    assertTrue(own.isRunning())
+                    own.stop()
+                }
+            }
+        } finally {
+            own.stop()
+            directory.deleteRecursively()
         }
     }
 
