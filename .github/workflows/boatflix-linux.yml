@@ -1,0 +1,130 @@
+name: BOATFLIX Linux
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      APPIMAGE_WEBSITE_URL: https://github.com/wGodfather/BOATFLIX
+      UPDATE_INFORMATION: gh-releases-zsync|wGodfather|BOATFLIX|latest|BOATFLIX-Linux-x86_64-*.AppImage.zsync
+    steps:
+      - uses: actions/checkout@v6
+      - name: Linux dependencies
+        run: |
+          bash scripts/linux/install-desktop-build-dependencies.sh fakeroot rpm cpio zsync desktop-file-utils
+          git lfs pull --include="composeApp/src/desktopMain/native/linux/**,composeApp/src/desktopMain/resources/torrserver/linux-amd64/**,composeApp/src/desktopMain/resources/verification/linux/**" --exclude=""
+          touch local.properties
+          chmod +x gradlew scripts/linux/*.sh
+          echo "RELEASE_VERSION=$(sed -n 's/^VERSION_NAME=//p' composeApp/Configuration/DesktopVersion.properties | tr -d '\r')" >> "$GITHUB_ENV"
+          tool="$RUNNER_TEMP/appimagetool-x86_64.AppImage"
+          curl -fsSL -o "$tool" https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  $tool" | sha256sum --check
+          chmod +x "$tool"
+          echo "APPIMAGETOOL=$tool" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Linux regression tests and three package formats
+        run: |
+          bash scripts/linux/test-linux-deb-tools.sh
+          xvfb-run -a ./gradlew :composeApp:desktopTest --tests '*LinuxUpdateInstallTest*' --tests '*AppUrlBridgeTest*' --tests '*DesktopStorageTest*' --tests '*SearchRequestStateTest*' --tests '*StreamParserTest*' :composeApp:packageReleaseDeb :composeApp:packageReleaseRpm :composeApp:packageReleaseAppImage -Pkotlin.compiler.execution.strategy=in-process -Pcompose.desktop.packaging.checkJdkVendor=false --max-workers=1 --no-configuration-cache --no-daemon --stacktrace
+          mkdir -p dist
+          cp composeApp/build/compose/binaries/main-release/deb/*.deb "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.deb"
+          cp composeApp/build/compose/binaries/main-release/rpm/*.rpm "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.rpm"
+          cp composeApp/build/compose/release-appimages/*.AppImage dist/
+          chmod +x dist/*.AppImage
+          bash scripts/linux/verify-linux-deb.sh dist/*.deb
+          bash scripts/linux/verify-linux-rpm.sh dist/*.rpm
+          (cd dist && zsyncmake "BOATFLIX-Linux-x86_64-$RELEASE_VERSION.AppImage")
+      - name: Install DEB and launch the packaged application
+        run: |
+          sudo apt-get install -y "$PWD/dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.deb"
+          test -x /opt/boatflix/bin/BOATFLIX
+          desktop-file-validate /usr/share/applications/boatflix.desktop
+          mkdir -p linux-qa
+          set +e
+          timeout 25s xvfb-run -a /opt/boatflix/bin/BOATFLIX > linux-qa/deb-launch.log 2>&1
+          result=$?
+          set -e
+          test "$result" = 124
+          if grep -E 'Exception in thread "main"|UnsatisfiedLinkError|Could not initialize class' linux-qa/deb-launch.log; then exit 1; fi
+          (cd dist && sha256sum *.deb *.rpm *.AppImage *.zsync > SHA256SUMS-Linux.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOATFLIX-Linux-${{ env.RELEASE_VERSION }}
+          path: dist/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: BOATFLIX-Linux-QA-${{ env.RELEASE_VERSION }}
+          path: |
+            linux-qa
+            composeApp/build/test-results/desktopTest
+      - name: Reusable Linux app bundle for Flatpak
+        run: tar -czf "$RUNNER_TEMP/boatflix-linux-app.tar.gz" -C composeApp/build/compose/binaries/main-release/app/BOATFLIX .
+      - name: Upload reusable app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: boatflix-linux-app
+          path: ${{ runner.temp }}/boatflix-linux-app.tar.gz
+          if-no-files-found: error
+
+  flatpak:
+    needs: linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: boatflix-linux-app
+          path: bundle
+      - name: Flatpak toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder desktop-file-utils xvfb dbus-x11
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --system flathub org.gnome.Platform//50 org.gnome.Sdk//50
+          echo "RELEASE_VERSION=$(sed -n 's/^VERSION_NAME=//p' composeApp/Configuration/DesktopVersion.properties | tr -d '\r')" >> "$GITHUB_ENV"
+          mkdir -p app-root
+          tar -xzf bundle/boatflix-linux-app.tar.gz -C app-root
+      - name: Build standalone Flatpak bundle
+        run: |
+          mkdir -p flatpak dist
+          cp scripts/linux/nuvio-launcher.sh scripts/linux/linux-shortcut-definition.sh scripts/linux/com.wgodfather.boatflix.desktop.metainfo.xml scripts/linux/nuvio-flatpak.yml flatpak/
+          chmod +x flatpak/nuvio-launcher.sh
+          sed -i "s|version=\"0.0.0\"|version=\"$RELEASE_VERSION\"|;s|date=\"1970-01-01\"|date=\"$(date -u +%F)\"|" flatpak/com.wgodfather.boatflix.desktop.metainfo.xml
+          sed -i "s|\${app_root}|$GITHUB_WORKSPACE/app-root|g" flatpak/nuvio-flatpak.yml
+          flatpak-builder --repo=flatpak-repo --force-clean flatpak-build flatpak/nuvio-flatpak.yml
+          flatpak build-bundle flatpak-repo "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.flatpak" com.wgodfather.boatflix.desktop
+          (cd dist && sha256sum *.flatpak > SHA256SUMS-Flatpak.txt)
+      - name: Install and launch Flatpak
+        run: |
+          sudo flatpak install -y --system "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.flatpak"
+          flatpak info com.wgodfather.boatflix.desktop
+          mkdir -p flatpak-qa
+          set +e
+          timeout 25s dbus-run-session -- xvfb-run -a flatpak run com.wgodfather.boatflix.desktop > flatpak-qa/launch.log 2>&1
+          result=$?
+          set -e
+          test "$result" = 124
+          if grep -E 'Exception in thread "main"|UnsatisfiedLinkError|Could not initialize class' flatpak-qa/launch.log; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOATFLIX-Flatpak-${{ env.RELEASE_VERSION }}
+          path: dist/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: BOATFLIX-Flatpak-QA-${{ env.RELEASE_VERSION }}
+          path: flatpak-qa

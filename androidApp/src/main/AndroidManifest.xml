@@ -8,9 +8,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
     <application
         android:name="com.nuvio.app.NuvioApplication"
         android:allowBackup="false"
+        android:banner="@drawable/boatflix_tv_banner"
         android:enableOnBackInvokedCallback="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -25,6 +29,21 @@
             android:value="false" />
 
         <activity
+            android:name="com.nuvio.app.BoatflixTvActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:banner="@drawable/boatflix_tv_banner"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Nuvio.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:exported="true"
             android:name="com.nuvio.app.MainActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
@@ -37,7 +56,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="nuvio"
+                    android:scheme="boatflix"
                     android:host="auth"
                     android:path="/simkl" />
             </intent-filter>
@@ -48,7 +67,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="nuvio"
+                    android:scheme="boatflix"
                     android:host="auth"
                     android:path="/trakt" />
             </intent-filter>
@@ -58,7 +77,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="nuvio" />
+                <data android:scheme="boatflix" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

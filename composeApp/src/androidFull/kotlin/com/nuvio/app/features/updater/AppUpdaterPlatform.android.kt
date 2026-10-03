@@ -10,10 +10,10 @@ actual object AppUpdaterPlatform {
 
     actual val releaseSource: AppUpdateReleaseSource = AppUpdateReleaseSource(
         owner = "wGodfather",
-        repo = "NuvioDesktop",
+        repo = "BOATFLIX",
         channelBranch = null,
         includePrereleases = true,
-        userAgent = "NuvioMobile",
+        userAgent = "BOATFLIX",
     )
 
     actual val assetSelector: AppUpdateAssetSelector

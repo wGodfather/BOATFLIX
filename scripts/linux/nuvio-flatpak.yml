@@ -2,7 +2,7 @@ app-id: com.wgodfather.boatflix.desktop
 runtime: org.gnome.Platform
 runtime-version: '50'
 sdk: org.gnome.Sdk
-command: nuvio
+command: boatflix
 add-extensions:
   org.freedesktop.Platform.codecs-extra:
     version: "25.08-extra"
@@ -138,7 +138,7 @@ modules:
       - mkdir -p /app/lib/intel-vaapi-driver 
       - mkdir -p /app/lib/nvidia-vaapi-driver
       - cp -a /run/build/nuvio/. /app/opt/BOATFLIX/
-      - install -Dm755 /run/build/nuvio/nuvio-launcher.sh /app/bin/nuvio
+      - install -Dm755 /run/build/nuvio/nuvio-launcher.sh /app/bin/boatflix
       - install -Dm644 /run/build/nuvio/com.wgodfather.boatflix.desktop.metainfo.xml /app/share/metainfo/com.wgodfather.boatflix.desktop.metainfo.xml
       - install -Dm644 /run/build/nuvio/lib/BOATFLIX.png /app/share/icons/hicolor/512x512/apps/com.wgodfather.boatflix.desktop.png
       - |
@@ -147,7 +147,7 @@ modules:
           source /run/build/nuvio/linux-shortcut-definition.sh
           nuvio_linux_write_desktop_entry_file \
             "/app/share/applications/com.wgodfather.boatflix.desktop.desktop" \
-            "nuvio %u" \
+            "boatflix %u" \
             "com.wgodfather.boatflix.desktop"
         '
       - desktop-file-validate /app/share/applications/com.wgodfather.boatflix.desktop.desktop

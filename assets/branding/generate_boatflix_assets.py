@@ -34,4 +34,30 @@ ImageDraw.Draw(mark).text((168, (144 - (bounds[3] - bounds[1])) / 2 - bounds[1])
 for path in DRAWABLE.glob("app_logo_wordmark*.png"):
     mark.save(path)
 
-print("BOATFLIX icon, Windows/macOS icons and shared wordmarks generated.")
+ANDROID = ROOT / "composeApp/src/androidMain/res"
+for path in ANDROID.glob("mipmap-*/*.webp"):
+    size = Image.open(path).size
+    if "foreground" in path.name:
+        foreground = Image.new("RGBA", size)
+        inset = round(size[0] * 0.64)
+        foreground.alpha_composite(image.resize((inset, inset), Image.Resampling.LANCZOS),
+                                   ((size[0] - inset) // 2, (size[1] - inset) // 2))
+        foreground.save(path, lossless=True)
+    elif "monochrome" in path.name:
+        scaled = image.resize(size, Image.Resampling.LANCZOS)
+        mask = scaled.convert("L").point(lambda value: 255 if value > 95 else 0)
+        monochrome = Image.new("RGBA", size, "white")
+        monochrome.putalpha(mask)
+        monochrome.save(path, lossless=True)
+    else:
+        image.resize(size, Image.Resampling.LANCZOS).save(path, lossless=True)
+for path in ANDROID.glob("drawable-nodpi/ic_splash_logo*.webp"):
+    image.resize(Image.open(path).size, Image.Resampling.LANCZOS).save(path, lossless=True)
+banner = Image.new("RGB", (320, 180), "#080808")
+banner.paste(image.resize((136, 136), Image.Resampling.LANCZOS), (12, 22))
+tv_font = ImageFont.truetype(str(ROOT / "composeApp/src/commonMain/composeResources/font/jetbrains_sans_bold.ttf"), 27)
+ImageDraw.Draw(banner).text((155, 71), "BOATFLIX", font=tv_font, fill="#EFC26D")
+banner_path = ANDROID / "drawable-xhdpi/boatflix_tv_banner.png"
+banner_path.parent.mkdir(parents=True, exist_ok=True)
+banner.save(banner_path)
+print("BOATFLIX desktop, Android, TV and shared UI assets generated.")

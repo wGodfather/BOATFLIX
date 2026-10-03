@@ -2,12 +2,25 @@
 
 ![BOATFLIX](composeApp/src/commonMain/composeResources/drawable/app_logo_wordmark_original.png)
 
-BOATFLIX, Windows için bağımsız bir masaüstü medya uygulamasıdır.
+BOATFLIX, Windows, Linux, Android mobil, Android TV ve Google TV için bağımsız bir medya uygulamasıdır.
 Uygulama, eklediğiniz kaynaklarla film ve dizileri keşfetmenizi, kitaplık oluşturmanızı ve medya oynatmanızı sağlar.
 
 ## İndir
 
-[BOATFLIX 1.31 Windows kurulum dosyası](https://github.com/wGodfather/BOATFLIX/releases/download/1.31/BOATFLIX-Windows-x64-1.31.msi)
+[BOATFLIX 1.32 — tüm indirme dosyaları](https://github.com/wGodfather/BOATFLIX/releases/tag/1.32)
+
+| Cihaz | Dosya |
+|---|---|
+| Windows x64 | [MSI](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Windows-x64-1.32.msi) |
+| Linux x86_64 | [AppImage](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.AppImage) · [DEB](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.deb) · [RPM](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.rpm) · [Flatpak](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.flatpak) |
+| Android telefon / tablet | [Evrensel APK](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Android-universal-1.32.apk) |
+| Android TV / Google TV | [Evrensel APK](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Android-universal-1.32.apk) |
+
+Android mobil ve TV aynı imzalı APK'yı kullanır. TV başlatıcısı ve yatay ekran desteği pakete dahildir.
+Daha küçük indirmeler için sürüm sayfasında `arm64-v8a`, `armeabi-v7a`, `x86` ve `x86_64` APK'ları da bulunur.
+32 bit ARM TV kutuları için `armeabi-v7a`, 64 bit Android cihazlar için `arm64-v8a` seçilebilir;
+mimariden emin değilseniz evrensel APK'yı kullanın. Android 7.0 veya üstü gerekir.
+Linux paketleri x86_64 içindir; ARM Linux bu sürümde yoktur.
 
 [Sürümler ve güncellemeler](https://github.com/wGodfather/BOATFLIX/releases)
 
@@ -17,8 +30,8 @@ Sürüm numaraları 1.31, 1.32, 1.33 şeklinde ilerler.
 
 ## Kaynak ve derleme
 
-[Derleme ve yayın bilgileri](FORK_TR.md). İlk yayın Windows x64 içindir;
-macOS, Linux ve Android kurulum paketleri bu sürümde yayımlanmaz.
+[Derleme ve yayın bilgileri](FORK_TR.md). Windows, Linux ve Android için ayrı derleme iş akışları bulunur.
+macOS ve iOS kurulum paketleri bu sürüme dahil değildir.
 
 ## Kaynak proje ve lisans
 

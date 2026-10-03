@@ -67,7 +67,7 @@ android {
 
     defaultConfig {
         // Independent signature and package for this fork; the official app can coexist.
-        applicationId = "com.wgodfather.nuvio"
+        applicationId = "com.wgodfather.boatflix"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = releaseAppVersionCode
@@ -115,7 +115,7 @@ android {
             isEnable = buildsReleaseApks
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = false
+            isUniversalApk = true
         }
     }
 
@@ -146,7 +146,7 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
-        variant.applicationId.set("com.wgodfather.nuvio.debug")
+        variant.applicationId.set("com.wgodfather.boatflix.debug")
     }
 }
 

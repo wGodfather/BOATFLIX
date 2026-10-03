@@ -2,7 +2,7 @@
 
 readonly NUVIO_LINUX_SHORTCUT_RELATIVE_PATH="usr/share/applications/boatflix.desktop"
 readonly NUVIO_LINUX_SHORTCUT_NAME="BOATFLIX"
-readonly NUVIO_LINUX_SHORTCUT_COMMENT="Nuvio Media Player"
+readonly NUVIO_LINUX_SHORTCUT_COMMENT="BOATFLIX Media Player"
 readonly NUVIO_LINUX_SHORTCUT_CATEGORIES="AudioVideo;"
 readonly NUVIO_LINUX_SHORTCUT_STARTUP_NOTIFY="true"
 readonly NUVIO_LINUX_SHORTCUT_STARTUP_WM_CLASS="com-nuvio-app-MainKt"

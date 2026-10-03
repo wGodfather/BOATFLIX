@@ -1,0 +1,116 @@
+name: BOATFLIX Android and TV
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      KEYSTORE_BASE64: ${{ secrets.BOATFLIX_ANDROID_KEYSTORE_BASE64 }}
+      STORE_PASSWORD: ${{ secrets.BOATFLIX_ANDROID_STORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.BOATFLIX_ANDROID_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.BOATFLIX_ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Independent BOATFLIX signing key
+        run: |
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          for key in ['KEYSTORE_BASE64', 'STORE_PASSWORD', 'KEY_ALIAS', 'KEY_PASSWORD']:
+              if not os.environ.get(key):
+                  raise RuntimeError(f'{key} secret is missing')
+          keyfile = Path(os.environ['RUNNER_TEMP']) / 'boatflix.p12'
+          keyfile.write_bytes(base64.b64decode(os.environ['KEYSTORE_BASE64']))
+          keyfile.chmod(0o600)
+          Path('local.properties').write_text('\n'.join([
+              f'NUVIO_RELEASE_STORE_FILE={keyfile}',
+              f'NUVIO_RELEASE_STORE_PASSWORD={os.environ["STORE_PASSWORD"]}',
+              f'NUVIO_RELEASE_KEY_ALIAS={os.environ["KEY_ALIAS"]}',
+              f'NUVIO_RELEASE_KEY_PASSWORD={os.environ["KEY_PASSWORD"]}',
+          ]) + '\n')
+          PY
+          echo "RELEASE_VERSION=$(sed -n 's/^VERSION_NAME=//p' composeApp/Configuration/DesktopVersion.properties | tr -d '\r')" >> "$GITHUB_ENV"
+          chmod +x gradlew
+          git lfs pull --include="composeApp/src/full/**,composeApp/src/androidMain/**,composeApp/src/androidFull/**" --exclude=""
+      - name: Fork regression tests and signed mobile / TV APKs
+        run: |
+          ./gradlew :composeApp:testAndroidHostTest --tests '*AndroidTorrentDownloadTest*' --tests '*AndroidDownloadTransferTest*' --tests '*P2pStreamingEngineAndroidTest*' --tests '*TmdbCatalogTransportTest*' --tests '*SearchRequestStateTest*' --tests '*CatalogPaginationStateTest*' --tests '*StreamParserTest*' --tests '*StreamListingPolicyTest*' --tests '*StreamDownloadButtonTest*' --tests '*StreamSourceVerificationTest*' :androidApp:assembleFullRelease -Pkotlin.compiler.execution.strategy=in-process -PreleaseMinifyEnabled=false --max-workers=1 --no-configuration-cache --no-daemon
+          mkdir -p dist
+          build_tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          for apk in androidApp/build/outputs/apk/full/release/*.apk; do
+            abi=$(basename "$apk" | sed 's/androidApp-full-//;s/-release.apk//')
+            target="dist/BOATFLIX-Android-$abi-$RELEASE_VERSION.apk"
+            cp "$apk" "$target"
+            "$build_tools/apksigner" verify --verbose --print-certs "$target" > "$target.signature.txt"
+            "$build_tools/aapt" dump badging "$target" > "$target.manifest.txt"
+            grep -q "package: name='com.wgodfather.boatflix'.*versionName='$RELEASE_VERSION'" "$target.manifest.txt"
+            grep -q "application-label:'BOATFLIX'" "$target.manifest.txt"
+            "$build_tools/aapt" dump xmltree "$target" AndroidManifest.xml > "$target.xmltree.txt"
+            grep -q 'android.intent.category.LEANBACK_LAUNCHER' "$target.xmltree.txt"
+            grep -q 'com.nuvio.app.BoatflixTvActivity' "$target.xmltree.txt"
+            grep -q 'android.hardware.touchscreen' "$target.xmltree.txt"
+            sha256sum "$target" > "$target.sha256"
+          done
+          test "$(find dist -name '*.apk' | wc -l)" = 5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOATFLIX-Android-${{ env.RELEASE_VERSION }}
+          path: dist/*
+          if-no-files-found: error
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Mobile search, downloads and torrent integration
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: default
+          arch: x86_64
+          ram-size: 2048M
+          disk-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash .github/scripts/run-android-fork-qa.sh
+      - name: Android TV launcher and remote navigation
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: android-tv
+          arch: x86
+          ram-size: 2048M
+          disk-size: 4096M
+          force-avd-creation: true
+          avd-name: boatflix-tv
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash .github/scripts/run-boatflix-tv-qa.sh
+      - name: Test reports and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: BOATFLIX-Android-QA-${{ env.RELEASE_VERSION }}
+          path: |
+            composeApp/build/test-results/testAndroidHostTest
+            androidApp/build/reports/androidTests
+            androidApp/build/outputs/androidTest-results
+            android-seed.log
+            android-qa-logcat.txt
+            android-ui-screenshots
+            tv-qa

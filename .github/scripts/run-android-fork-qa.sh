@@ -22,4 +22,4 @@ bytes=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["bytes"]
 grep -q 'metadata served' android-seed.log
 grep -q 'piece served:' android-seed.log
 mkdir -p android-ui-screenshots
-adb pull /sdcard/Android/data/com.wgodfather.nuvio.debug/files/fork-ui-qa/library-downloads.png android-ui-screenshots/
+adb pull /sdcard/Android/data/com.wgodfather.boatflix.debug/files/fork-ui-qa/library-downloads.png android-ui-screenshots/

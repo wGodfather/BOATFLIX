@@ -2,12 +2,13 @@
 
 Ana depo: https://github.com/wGodfather/BOATFLIX. Ana dal: `main`.
 Sürüm `composeApp/Configuration/DesktopVersion.properties` içinde tanımlanır.
-Güncel sürüm `1.31`, derleme kodu `131` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
+Güncel sürüm `1.32`, derleme kodu `132` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
 
 ## Bağımsız kimlik
 
 - Uygulama: BOATFLIX.
 - Masaüstü paket kimliği: `com.wgodfather.boatflix.desktop`.
+- Android paket kimliği: `com.wgodfather.boatflix`; geliştirme paketi: `com.wgodfather.boatflix.debug`.
 - Windows MSI yükseltme kimliği: `aef97f97-f7b0-5a11-abfd-11fd8c07ad51`. Sonraki BOATFLIX sürümlerinde aynı kalmalıdır.
 - Windows ayarları: `%APPDATA%/BOATFLIX`.
 - Windows önbelleği: `%LOCALAPPDATA%/BOATFLIX/Cache`.
@@ -34,7 +35,25 @@ Doğrulama sonrasında GitHub Releases üzerinden paket ve SHA-256 dosyası yay�
 Hizmet ayarları isteğe bağlı `NUVIO_DESKTOP_LOCAL_PROPERTIES_BASE64` secret'ından okunabilir.
 Bu secret yoksa yerel/misafir kullanım için derlenir. Başka bir deponun secret'ları otomatik taşınmaz.
 
-İlk yayımlanan platform Windows x64'tür. Android/macOS/Linux paketleri ayrı doğrulama gerektirir.
+## Android mobil ve TV
+
+**BOATFLIX Android and TV** iş akışı dört ABI ve evrensel imzalı APK üretir.
+İmza için `BOATFLIX_ANDROID_KEYSTORE_BASE64`, `BOATFLIX_ANDROID_STORE_PASSWORD`,
+`BOATFLIX_ANDROID_KEY_ALIAS`, `BOATFLIX_ANDROID_KEY_PASSWORD` depo secret'ları kullanılır.
+Yeni sürümler aynı imza anahtarıyla hazırlanmalıdır; anahtar depoya eklenmez.
+Mobil cihazda arama/torrent/indirme testleri, TV sistem imajında kumanda ve başlatıcı testleri çalışır.
+Android TV ve Google TV aynı `LEANBACK_LAUNCHER` etkinliğini kullanır.
+
+## Linux
+
+**BOATFLIX Linux** iş akışı x86_64 AppImage, DEB, RPM ve Flatpak dosyaları üretir.
+DEB ve Flatpak kurularak sanal ekranda açılışları kontrol edilir.
+AppImage ve sistem paketleri libmpv, GTK3 ve WebKitGTK 4.1 sistem bileşenlerini kullanır;
+DEB/RPM paketlerinin bağımlılıkları bu gereksinimleri tanımlar. Flatpak kendi çalışma ortamını kurar.
+Linux ayarları `~/.config/boatflix`, önbelleği `~/.cache/boatflix` içindedir.
+
+İlk yayın 1.31 Windows x64'tür. 1.32 Android ve Linux paketlerini ekler.
+macOS ve iOS bu yayına dahil değildir.
 Özgün projenin teknik paket/kaynak kod adları derleme uyumluluğu için yer yer korunur.
 Simge kaynağı ve tekrar üretim aracı `assets/branding/` içindedir.
 Kaynak kod GPL-3.0 lisansındadır; `LICENSE` ve `UPSTREAM_README.md` korunur.
