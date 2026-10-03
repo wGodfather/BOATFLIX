@@ -46,6 +46,8 @@ jobs:
           (cd dist && zsyncmake "BOATFLIX-Linux-x86_64-$RELEASE_VERSION.AppImage")
       - name: Install DEB and launch the packaged application
         run: |
+          # Headless CI lacks the menu directory that desktop installations provide.
+          sudo mkdir -p /usr/share/desktop-directories
           sudo apt-get install -y "$PWD/dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.deb"
           test -x /opt/boatflix/bin/BOATFLIX
           desktop-file-validate /usr/share/applications/boatflix.desktop
@@ -55,9 +57,18 @@ jobs:
           result=$?
           set -e
           test "$result" = 124
+          cat linux-qa/deb-launch.log
           if grep -E 'Exception in thread "main"|UnsatisfiedLinkError|Could not initialize class' linux-qa/deb-launch.log; then exit 1; fi
+          set +e
+          timeout 25s xvfb-run -a "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.AppImage" --appimage-extract-and-run > linux-qa/appimage-launch.log 2>&1
+          result=$?
+          set -e
+          cat linux-qa/appimage-launch.log
+          test "$result" = 124
+          if grep -E 'Exception in thread "main"|UnsatisfiedLinkError|Could not initialize class' linux-qa/appimage-launch.log; then exit 1; fi
           (cd dist && sha256sum *.deb *.rpm *.AppImage *.zsync > SHA256SUMS-Linux.txt)
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: BOATFLIX-Linux-${{ env.RELEASE_VERSION }}
           path: dist/*

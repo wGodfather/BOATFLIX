@@ -88,6 +88,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: bash .github/scripts/run-android-fork-qa.sh
+      - name: Preserve mobile device test reports
+        run: |
+          mkdir -p mobile-qa
+          cp -a androidApp/build/outputs/androidTest-results mobile-qa/
       - name: Android TV launcher and remote navigation
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -98,6 +102,23 @@ jobs:
           disk-size: 4096M
           force-avd-creation: true
           avd-name: boatflix-tv
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash .github/scripts/run-boatflix-tv-qa.sh
+      - name: Preserve Android TV device test reports
+        run: |
+          cp -a tv-qa android-tv-qa
+          cp -a androidApp/build/outputs/androidTest-results android-tv-qa/
+      - name: Google TV launcher and remote navigation
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google-tv
+          arch: x86
+          ram-size: 2048M
+          disk-size: 4096M
+          force-avd-creation: true
+          avd-name: boatflix-google-tv
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: bash .github/scripts/run-boatflix-tv-qa.sh
@@ -113,4 +134,6 @@ jobs:
             android-seed.log
             android-qa-logcat.txt
             android-ui-screenshots
+            mobile-qa
+            android-tv-qa
             tv-qa
