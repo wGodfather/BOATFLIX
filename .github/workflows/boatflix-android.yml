@@ -98,6 +98,7 @@ jobs:
           api-level: 36
           target: android-tv
           arch: x86_64
+          profile: tv_1080p
           ram-size: 3072M
           disk-size: 4096M
           force-avd-creation: true
@@ -115,6 +116,7 @@ jobs:
           api-level: 36
           target: google-tv
           arch: x86_64
+          profile: tv_1080p
           ram-size: 3072M
           disk-size: 4096M
           force-avd-creation: true

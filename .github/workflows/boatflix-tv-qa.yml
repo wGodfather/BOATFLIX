@@ -50,6 +50,7 @@ jobs:
           api-level: 36
           target: ${{ matrix.target }}
           arch: x86_64
+          profile: tv_1080p
           ram-size: 3072M
           disk-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim

@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p tv-qa
-adb wait-for-device
-for attempt in {1..60}; do
-  test "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 && break
+# Use the same adb binary as the emulator action and tolerate adbd's first-boot restart.
+adb() { "$ANDROID_HOME/platform-tools/adb" "$@"; }
+ready=0
+for attempt in {1..90}; do
+  if test "$(adb get-state 2>/dev/null | tr -d '\r')" = device && \
+     test "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 && \
+     adb shell input keyevent KEYCODE_WAKEUP; then
+    sleep 5
+    if adb shell true; then ready=1; break; fi
+  fi
   sleep 2
 done
-adb shell input keyevent KEYCODE_WAKEUP
+test "$ready" = 1
 ./gradlew :androidApp:connectedFullDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=com.nuvio.android.BoatflixTvRemoteTest \
-  -Pandroid.testInstrumentationRunnerArguments.leaveInstalled=true \
+  -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true \
   -Pkotlin.compiler.execution.strategy=in-process --max-workers=1 --no-configuration-cache --no-daemon
 adb pull /sdcard/Android/data/com.wgodfather.boatflix.debug/files/fork-ui-qa tv-qa/screenshots
 adb install -r "dist/BOATFLIX-Android-${TV_ABI:-x86_64}-$RELEASE_VERSION.apk"

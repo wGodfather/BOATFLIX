@@ -16,6 +16,7 @@ import com.nuvio.app.BoatflixTvActivity
 import com.nuvio.app.core.ui.NuvioTheme
 import com.nuvio.app.features.library.LibraryScreen
 import java.io.File
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -29,6 +30,8 @@ class BoatflixTvRemoteTest {
     @Test fun tvLauncherAndLibraryTabsAcceptRemoteInput() {
         assertEquals(Configuration.UI_MODE_TYPE_TELEVISION,
             compose.activity.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK)
+        // The Android test harness starts in touch mode; a real TV remote uses key mode.
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         compose.activityRule.scenario.onActivity { activity ->
             activity.setContent { NuvioTheme { LibraryScreen() } }
         }
@@ -47,6 +50,9 @@ class BoatflixTvRemoteTest {
         remote(KeyEvent.KEYCODE_DPAD_RIGHT)
         remote(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithText("No downloads yet").assertIsDisplayed()
+    }
+
+    @After fun captureTvScreen() {
         val screenshot = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         val destination = File(compose.activity.getExternalFilesDir(null), "fork-ui-qa/tv-remote-downloads.png")
         destination.parentFile!!.mkdirs()
