@@ -95,10 +95,10 @@ jobs:
       - name: Android TV launcher and remote navigation
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 36
           target: android-tv
-          arch: x86
-          ram-size: 2048M
+          arch: x86_64
+          ram-size: 3072M
           disk-size: 4096M
           force-avd-creation: true
           avd-name: boatflix-tv
@@ -112,10 +112,10 @@ jobs:
       - name: Google TV launcher and remote navigation
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 36
           target: google-tv
-          arch: x86
-          ram-size: 2048M
+          arch: x86_64
+          ram-size: 3072M
           disk-size: 4096M
           force-avd-creation: true
           avd-name: boatflix-google-tv
