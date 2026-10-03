@@ -21,13 +21,16 @@ class PluginFetchTimeoutTest {
                 try { Thread.sleep(5000); exchange.sendResponseHeaders(200, -1) }
                 catch (_: Exception) { } finally { exchange.close() }
             }
+            for (abortSetup in listOf("var options = {signal: AbortSignal.timeout(200)};",
+                "var controller = new AbortController(); var timer = setTimeout(function(){controller.abort();},200); var options = {signal:controller.signal};")) {
             val started = System.nanoTime()
             val results = withTimeout(2500) {
                 PluginRuntime.executePlugin("""
                     module.exports.getStreams = async function() {
+                        $abortSetup
                         var results = await Promise.allSettled([
                             fetch('$url/fast').then(function() { return [{title:'ready', url:'https://example.test/ready.mp4'}]; }),
-                            fetch('$url/slow', {signal: AbortSignal.timeout(200)}).then(function() { return []; })
+                            fetch('$url/slow', options).then(function() { return []; })
                         ]);
                         return results[0].status === 'fulfilled' ? results[0].value : [];
                     };
@@ -35,7 +38,21 @@ class PluginFetchTimeoutTest {
             }
             assertEquals("ready", results.single().title)
             assertTrue((System.nanoTime() - started) / 1_000_000 < 2500)
+            }
         }
+    }
+
+    @Test fun `cleared timer does not delay scraper completion or run its callback`() = runBlocking {
+        val results = withTimeout(2000) {
+            PluginRuntime.executePlugin("""
+                module.exports.getStreams = async function() {
+                    var timer = setTimeout(function(){throw new Error('Cancelled timer ran');},10000);
+                    clearTimeout(timer);
+                    return [{title:'ready',url:'https://example.test/timer.mp4'}];
+                };
+            """.trimIndent(), "1", "movie", null, null, "clear-timer-test", false)
+        }
+        assertEquals("ready", results.single().title)
     }
 
     @Test fun `already aborted fetch never reaches the server`() = runBlocking {

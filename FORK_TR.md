@@ -27,6 +27,7 @@ indirmez. Başlık/yıl/bölüm eşleşmesi, bildirilen boyut, çözünürlük v
 uygulanır. Bu adaylar ölçülmüş video gibi işaretlenmez; `verifiedMedia` doldurulmaz.
 Eksik bilgili torrentler ve doğrudan video kaynakları ölçüm yolunu kullanır.
 Eklentilerin `AbortSignal.timeout` süre sınırları yerel HTTP isteklerine uygulanır.
+`setTimeout`, `clearTimeout` ve `AbortController` ile iptal edilen istekler de desteklenir.
 Masaüstünde süre aşımında gerçek ağ isteği iptal edilir; yavaş alt kaynaklar BOAT'ın
 diğer sonuçlarını genel eklenti süre sınırına kadar bekletmez.
 Kaynak doğrulama ret nedenleri ayar klasöründeki `logs/source-verification.log` dosyasına

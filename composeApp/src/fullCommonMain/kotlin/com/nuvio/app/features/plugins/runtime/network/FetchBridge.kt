@@ -7,6 +7,14 @@ import com.nuvio.app.features.addons.httpRequestRaw
 import com.nuvio.app.features.plugins.runtime.host.HostModule
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -21,8 +29,31 @@ private const val FETCH_TRUNCATION_SUFFIX = "\n...[truncated]"
 internal class FetchBridge : HostModule {
     private val log = Logger.withTag("PluginRuntime")
     private val json = Json { ignoreUnknownKeys = true }
+    private val pendingLock = Mutex()
+    private val requests = mutableMapOf<String, Job>()
+    private val abortedRequests = mutableSetOf<String>()
+    private val timers = mutableMapOf<String, CompletableDeferred<Boolean>>()
 
     override fun register(runtime: QuickJs) {
+        runtime.asyncFunction("__native_timer") { args ->
+            val id = args.getOrNull(0).toString()
+            val timeout = (args.getOrNull(1) as? Number)?.toLong()?.coerceAtLeast(0) ?: 0
+            val cleared = pendingLock.withLock { timers.getOrPut(id) { CompletableDeferred() } }
+            try { withTimeoutOrNull(timeout) { cleared.await() } ?: true }
+            finally { pendingLock.withLock { timers.remove(id) } }
+        }
+        runtime.asyncFunction("__native_clear_timer") { args ->
+            val id = args.getOrNull(0).toString()
+            pendingLock.withLock { timers.getOrPut(id) { CompletableDeferred() }.complete(false) }
+            null
+        }
+        runtime.asyncFunction("__native_abort_fetch") { args ->
+            val id = args.getOrNull(0).toString()
+            pendingLock.withLock {
+                requests[id]?.cancel() ?: run { abortedRequests.add(id) }
+            }
+            null
+        }
         runtime.asyncFunction("__native_fetch") { args ->
             val url = args.getOrNull(0)?.toString() ?: ""
             val method = args.getOrNull(1)?.toString() ?: "GET"
@@ -31,14 +62,24 @@ internal class FetchBridge : HostModule {
             val body = args.getOrNull(4)?.toString() ?: ""
             val followRedirects = args.getOrNull(5) as? Boolean ?: true
             val timeoutMs = (args.getOrNull(6) as? Number)?.toLong()?.takeIf { it > 0 }
+            val requestId = args.getOrNull(7)?.toString()
             try {
-                if (timeoutMs == null) {
-                    performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects)
-                } else {
-                    withTimeoutOrNull(timeoutMs) {
-                        performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects)
-                    } ?: error("Fetch timed out")
+                suspend fun fetch(): String = supervisorScope {
+                    val request = async { performNativeFetch(url, method, headersJson, bodyKind, body, followRedirects) }
+                    if (requestId != null) pendingLock.withLock {
+                        requests[requestId] = request
+                        if (abortedRequests.remove(requestId)) request.cancel()
+                    }
+                    try { request.await() }
+                    catch (cancelled: CancellationException) {
+                        currentCoroutineContext().ensureActive()
+                        error("Fetch aborted")
+                    } finally {
+                        if (requestId != null) pendingLock.withLock { requests.remove(requestId) }
+                    }
                 }
+                if (timeoutMs == null) fetch()
+                else withTimeoutOrNull(timeoutMs) { fetch() } ?: error("Fetch timed out")
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (t: Throwable) {
