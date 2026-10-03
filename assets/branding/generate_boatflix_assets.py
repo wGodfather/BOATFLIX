@@ -13,6 +13,7 @@ DESKTOP = ROOT / "composeApp/src/desktopMain/resources/icons"
 image = Image.open(SOURCE).convert("RGBA")
 assert image.width == image.height, "The supplied icon must be square"
 icon = image.resize((1024, 1024), Image.Resampling.LANCZOS)
+image.resize((512, 512), Image.Resampling.LANCZOS).save(SOURCE.with_name("boatflix-flatpak.png"))
 
 # Preserve resource names so existing theme and icon preferences remain compatible.
 for path in DRAWABLE.glob("app_icon_*.png"):

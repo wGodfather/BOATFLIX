@@ -2,12 +2,19 @@ name: BOATFLIX Linux
 
 on:
   workflow_dispatch:
+    inputs:
+      native_run:
+        description: Reuse native app bundle from an earlier successful Linux job (optional)
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   linux:
+    if: inputs.native_run == ''
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -17,7 +24,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Linux dependencies
         run: |
-          bash scripts/linux/install-desktop-build-dependencies.sh fakeroot rpm cpio zsync desktop-file-utils
+          bash scripts/linux/install-desktop-build-dependencies.sh fakeroot rpm cpio zsync desktop-file-utils xdotool imagemagick
           git lfs pull --include="composeApp/src/desktopMain/native/linux/**,composeApp/src/desktopMain/resources/torrserver/linux-amd64/**,composeApp/src/desktopMain/resources/verification/linux/**" --exclude=""
           touch local.properties
           chmod +x gradlew scripts/linux/*.sh
@@ -52,20 +59,8 @@ jobs:
           test -x /opt/boatflix/bin/BOATFLIX
           desktop-file-validate /usr/share/applications/boatflix.desktop
           mkdir -p linux-qa
-          set +e
-          timeout 25s xvfb-run -a /opt/boatflix/bin/BOATFLIX > linux-qa/deb-launch.log 2>&1
-          result=$?
-          set -e
-          test "$result" = 124
-          cat linux-qa/deb-launch.log
-          if grep -E 'Exception in thread "main"|UnsatisfiedLinkError|Could not initialize class' linux-qa/deb-launch.log; then exit 1; fi
-          set +e
-          timeout 25s xvfb-run -a "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.AppImage" --appimage-extract-and-run > linux-qa/appimage-launch.log 2>&1
-          result=$?
-          set -e
-          cat linux-qa/appimage-launch.log
-          test "$result" = 124
-          if grep -E 'Exception in thread "main"|UnsatisfiedLinkError|Could not initialize class' linux-qa/appimage-launch.log; then exit 1; fi
+          xvfb-run -a bash .github/scripts/smoke-linux-package.sh linux-qa/deb /opt/boatflix/bin/BOATFLIX
+          xvfb-run -a bash .github/scripts/smoke-linux-package.sh linux-qa/appimage "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.AppImage" --appimage-extract-and-run
           (cd dist && sha256sum *.deb *.rpm *.AppImage *.zsync > SHA256SUMS-Linux.txt)
       - uses: actions/upload-artifact@v4
         if: always()
@@ -91,6 +86,7 @@ jobs:
 
   flatpak:
     needs: linux
+    if: always() && (needs.linux.result == 'success' || inputs.native_run != '')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -99,10 +95,12 @@ jobs:
         with:
           name: boatflix-linux-app
           path: bundle
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.native_run || github.run_id }}
       - name: Flatpak toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder desktop-file-utils xvfb dbus-x11
+          sudo apt-get install -y flatpak flatpak-builder desktop-file-utils xvfb dbus-x11 xdotool imagemagick
           sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           sudo flatpak install -y --system flathub org.gnome.Platform//50 org.gnome.Sdk//50
           echo "RELEASE_VERSION=$(sed -n 's/^VERSION_NAME=//p' composeApp/Configuration/DesktopVersion.properties | tr -d '\r')" >> "$GITHUB_ENV"
@@ -112,6 +110,7 @@ jobs:
         run: |
           mkdir -p flatpak dist
           cp scripts/linux/nuvio-launcher.sh scripts/linux/linux-shortcut-definition.sh scripts/linux/com.wgodfather.boatflix.desktop.metainfo.xml scripts/linux/nuvio-flatpak.yml flatpak/
+          cp assets/branding/boatflix-flatpak.png flatpak/
           chmod +x flatpak/nuvio-launcher.sh
           sed -i "s|version=\"0.0.0\"|version=\"$RELEASE_VERSION\"|;s|date=\"1970-01-01\"|date=\"$(date -u +%F)\"|" flatpak/com.wgodfather.boatflix.desktop.metainfo.xml
           sed -i "s|\${app_root}|$GITHUB_WORKSPACE/app-root|g" flatpak/nuvio-flatpak.yml
@@ -123,12 +122,7 @@ jobs:
           sudo flatpak install -y --system "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.flatpak"
           flatpak info com.wgodfather.boatflix.desktop
           mkdir -p flatpak-qa
-          set +e
-          timeout 25s dbus-run-session -- xvfb-run -a flatpak run com.wgodfather.boatflix.desktop > flatpak-qa/launch.log 2>&1
-          result=$?
-          set -e
-          test "$result" = 124
-          if grep -E 'Exception in thread "main"|UnsatisfiedLinkError|Could not initialize class' flatpak-qa/launch.log; then exit 1; fi
+          dbus-run-session -- xvfb-run -a bash .github/scripts/smoke-linux-package.sh flatpak-qa flatpak run --env=JAVA_TOOL_OPTIONS=-Dskiko.renderApi=SOFTWARE com.wgodfather.boatflix.desktop
       - uses: actions/upload-artifact@v4
         with:
           name: BOATFLIX-Flatpak-${{ env.RELEASE_VERSION }}

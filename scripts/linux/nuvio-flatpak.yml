@@ -140,7 +140,7 @@ modules:
       - cp -a /run/build/nuvio/. /app/opt/BOATFLIX/
       - install -Dm755 /run/build/nuvio/nuvio-launcher.sh /app/bin/boatflix
       - install -Dm644 /run/build/nuvio/com.wgodfather.boatflix.desktop.metainfo.xml /app/share/metainfo/com.wgodfather.boatflix.desktop.metainfo.xml
-      - install -Dm644 /run/build/nuvio/lib/BOATFLIX.png /app/share/icons/hicolor/512x512/apps/com.wgodfather.boatflix.desktop.png
+      - install -Dm644 /run/build/nuvio/boatflix-flatpak.png /app/share/icons/hicolor/512x512/apps/com.wgodfather.boatflix.desktop.png
       - |
         bash -euo pipefail -c '
           mkdir -p /app/share/applications
@@ -152,6 +152,9 @@ modules:
         '
       - desktop-file-validate /app/share/applications/com.wgodfather.boatflix.desktop.desktop
     sources:
+      - type: file
+        path: boatflix-flatpak.png
+        dest-filename: boatflix-flatpak.png
       - type: file
         path: nuvio-launcher.sh
         dest-filename: nuvio-launcher.sh
