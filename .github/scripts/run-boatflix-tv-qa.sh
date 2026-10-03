@@ -20,7 +20,13 @@ test "$ready" = 1
   -Pkotlin.compiler.execution.strategy=in-process --max-workers=1 --no-configuration-cache --no-daemon
 adb pull /sdcard/Android/data/com.wgodfather.boatflix.debug/files/fork-ui-qa tv-qa/screenshots
 adb install -r "dist/BOATFLIX-Android-${TV_ABI:-x86_64}-$RELEASE_VERSION.apk"
-adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER -p com.wgodfather.boatflix > tv-qa/release-launch.txt
+adb shell cmd package query-activities --brief --components --query-flags 0 \
+  -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER \
+  -p com.wgodfather.boatflix > tv-qa/launcher-components.txt
+grep -q 'com.nuvio.app.BoatflixTvActivity' tv-qa/launcher-components.txt
+# Android's TV launcher resolves this category first, then starts the explicit component.
+adb shell am start -W -n com.wgodfather.boatflix/com.nuvio.app.BoatflixTvActivity \
+  -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER > tv-qa/release-launch.txt
 sleep 12
 adb shell dumpsys activity activities > tv-qa/release-activity.txt
 grep -q 'com.wgodfather.boatflix/com.nuvio.app.BoatflixTvActivity' tv-qa/release-activity.txt
