@@ -7,14 +7,17 @@ Uygulama, eklediğiniz kaynaklarla film ve dizileri keşfetmenizi, kitaplık olu
 
 ## İndir
 
-[BOATFLIX 1.32 — tüm indirme dosyaları](https://github.com/wGodfather/BOATFLIX/releases/tag/1.32)
+[BOATFLIX 1.33 — tüm indirme dosyaları](https://github.com/wGodfather/BOATFLIX/releases/tag/1.33)
+
+1.33, torrent sezon paketlerinde doğru bölümün oynatılmasını ve indirilmesini düzeltir.
+Önceden yanlış tamamlanmış bölümleri güncellemeden sonra yeniden indirin.
 
 | Cihaz | Dosya |
 |---|---|
-| Windows x64 | [MSI](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Windows-x64-1.32.msi) |
-| Linux x86_64 | [AppImage](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.AppImage) · [DEB](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.deb) · [RPM](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.rpm) · [Flatpak](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Linux-x86_64-1.32.flatpak) |
-| Android telefon / tablet | [Evrensel APK](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Android-universal-1.32.apk) |
-| Android TV / Google TV | [Evrensel APK](https://github.com/wGodfather/BOATFLIX/releases/download/1.32/BOATFLIX-Android-universal-1.32.apk) |
+| Windows x64 | [MSI](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/BOATFLIX-Windows-x64-1.33.msi) |
+| Linux x86_64 | [AppImage](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/BOATFLIX-Linux-x86_64-1.33.AppImage) · [DEB](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/BOATFLIX-Linux-x86_64-1.33.deb) · [RPM](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/BOATFLIX-Linux-x86_64-1.33.rpm) · [Flatpak](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/BOATFLIX-Linux-x86_64-1.33.flatpak) |
+| Android telefon / tablet | [Evrensel APK](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/BOATFLIX-Android-universal-1.33.apk) |
+| Android TV / Google TV | [Evrensel APK](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/BOATFLIX-Android-universal-1.33.apk) |
 
 Android mobil ve TV aynı imzalı APK'yı kullanır. TV başlatıcısı ve yatay ekran desteği pakete dahildir.
 Daha küçük indirmeler için sürüm sayfasında `arm64-v8a`, `armeabi-v7a`, `x86` ve `x86_64` APK'ları da bulunur.

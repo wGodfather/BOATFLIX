@@ -11,6 +11,10 @@ Torrent sezon paketlerinde doğru bölümün oynatılması ve indirilmesi düzel
 - BOATFLIX uygulama kimliği, imzası, simgesi ve kullanıcı verilerinin konumu korunur.
 - Sürüm 1.33, Android derleme kodu 133. Bu güncelleme VPN özelliği eklemez.
 
+Doğrulama: Windows 90, Linux 58, Android host 78 test geçti; telefon, Android TV ve Google TV emülatörlerinde toplam 8 cihaz testi geçti.
+Windows ve Android 1.32 → 1.33 yükseltmelerinde uygulama kimliği ve test verileri korundu.
+[Ayrıntılı doğrulama raporu](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/QA_REPORT.md), paket kaynakları için `RELEASE_MANIFEST.json`, dosya bütünlüğü için `SHA256SUMS.txt` yayına eklenmiştir.
+
 ## İndirme seçimi
 
 | Cihaz | Dosya |
