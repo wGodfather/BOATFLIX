@@ -10,7 +10,13 @@ for apk in "$old" "$new"; do
 done
 test "$(sort -u build/upgrade-qa/certificates.txt | wc -l)" = 1
 adb install "$old"
-adb shell am start -W -n "$package/com.nuvio.android.MainActivity" > build/upgrade-qa/old-launch.txt
+launch_app() {
+  local component
+  component=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p "$package" | tr -d '\r' | tail -1)
+  case "$component" in "$package/"*) ;; *) echo 'BOATFLIX launcher could not be resolved' >&2; return 1 ;; esac
+  adb shell am start -W -n "$component" | tee "$1"
+}
+launch_app build/upgrade-qa/old-launch.txt
 sleep 5
 adb shell am force-stop "$package"
 # This script runs only on a disposable emulator. Root permits a small owned-data
@@ -31,6 +37,6 @@ test "$before" = "$(adb shell sha256sum "$sentinel" | tr -d '\r')"
 adb shell dumpsys package "$package" > build/upgrade-qa/current-package.txt
 grep -q 'versionCode=133' build/upgrade-qa/current-package.txt
 grep -q 'versionName=1.33' build/upgrade-qa/current-package.txt
-adb shell am start -W -n "$package/com.nuvio.android.MainActivity" > build/upgrade-qa/current-launch.txt
+launch_app build/upgrade-qa/current-launch.txt
 adb shell am force-stop "$package"
 printf 'PASS: same signing certificate, package UID and owned data preserved from 1.32 to 1.33\n' > build/upgrade-qa/result.txt
