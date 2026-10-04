@@ -1,21 +1,24 @@
-# BOATFLIX 1.32
+# BOATFLIX 1.33
 
-Windows, Linux, Android mobil, Android TV ve Google TV indirmeleri.
+Torrent sezon paketlerinde doğru bölümün oynatılması ve indirilmesi düzeltildi.
 
-- BOATFLIX adı ve kullanıcının sağladığı siyah-altın simge.
-- Nuvio ile yan yana kurulabilen ayrı kurulum kimliği.
-- Ayrı profil, ayar, önbellek ve indirme klasörleri.
-- Güncellemeler doğrudan wGodfather/BOATFLIX deposundan alınır.
-- Sürüm numarası 1.32; sonraki sürümler 1.33, 1.34 şeklinde ilerler.
+- Aynı torrent farklı bölümlerde kullanıldığında istenen sezon/bölümün gerçek dosyası seçilir.
+- Kaynağın eski veya yanlış dosya indeksi, eşleşen bölüm dosyasını geçersiz kılamaz.
+- Bölüm bulunamazsa başka bölümün en büyük videosu açılmaz; açıklayıcı hata gösterilir.
+- Bölüm değiştiğinde oynatma akışı yeniden çözülür.
+- Yanlış dosyaya ait eski yarım torrent indirmeleri güvenli biçimde baştan başlar.
+- Önceden yanlış tamamlanan videolar değiştirilmez; güncellemeden sonra yeniden indirilmelidir.
+- BOATFLIX uygulama kimliği, imzası, simgesi ve kullanıcı verilerinin konumu korunur.
+- Sürüm 1.33, Android derleme kodu 133. Bu güncelleme VPN özelliği eklemez.
 
 ## İndirme seçimi
 
 | Cihaz | Dosya |
 |---|---|
-| Windows x64 | `BOATFLIX-Windows-x64-1.32.msi` |
-| Linux x86_64 | `BOATFLIX-Linux-x86_64-1.32.AppImage`, `.deb`, `.rpm` veya `.flatpak` |
-| Android telefon / tablet | `BOATFLIX-Android-universal-1.32.apk` |
-| Android TV / Google TV | `BOATFLIX-Android-universal-1.32.apk` |
+| Windows x64 | `BOATFLIX-Windows-x64-1.33.msi` |
+| Linux x86_64 | `BOATFLIX-Linux-x86_64-1.33.AppImage`, `.deb`, `.rpm` veya `.flatpak` |
+| Android telefon / tablet | `BOATFLIX-Android-universal-1.33.apk` |
+| Android TV / Google TV | `BOATFLIX-Android-universal-1.33.apk` |
 
 Mobil ve TV tek bir imzalı APK kullanır. TV menüsünde BOATFLIX afişiyle görünür ve yatay açılır.
 Daha küçük indirme için cihazınıza uygun `arm64-v8a`, `armeabi-v7a`, `x86` veya `x86_64` APK'sını seçebilirsiniz.

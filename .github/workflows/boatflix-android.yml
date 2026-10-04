@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
+      GH_TOKEN: ${{ github.token }}
       KEYSTORE_BASE64: ${{ secrets.BOATFLIX_ANDROID_KEYSTORE_BASE64 }}
       STORE_PASSWORD: ${{ secrets.BOATFLIX_ANDROID_STORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.BOATFLIX_ANDROID_KEY_ALIAS }}
@@ -49,7 +50,7 @@ jobs:
           git lfs pull --include="composeApp/src/full/**,composeApp/src/androidMain/**,composeApp/src/androidFull/**" --exclude=""
       - name: Fork regression tests and signed mobile / TV APKs
         run: |
-          ./gradlew :composeApp:testAndroidHostTest --tests '*AndroidTorrentDownloadTest*' --tests '*AndroidDownloadTransferTest*' --tests '*P2pStreamingEngineAndroidTest*' --tests '*TmdbCatalogTransportTest*' --tests '*SearchRequestStateTest*' --tests '*CatalogPaginationStateTest*' --tests '*StreamParserTest*' --tests '*StreamListingPolicyTest*' --tests '*StreamDownloadButtonTest*' --tests '*StreamSourceVerificationTest*' :androidApp:assembleFullRelease -Pkotlin.compiler.execution.strategy=in-process -PreleaseMinifyEnabled=false --max-workers=1 --no-configuration-cache --no-daemon
+          ./gradlew :composeApp:testAndroidHostTest --tests '*TorrentFileSelectionTest*' --tests '*AndroidTorrentDownloadTest*' --tests '*AndroidDownloadTransferTest*' --tests '*P2pStreamingEngineAndroidTest*' --tests '*TmdbCatalogTransportTest*' --tests '*SearchRequestStateTest*' --tests '*CatalogPaginationStateTest*' --tests '*StreamParserTest*' --tests '*StreamListingPolicyTest*' --tests '*StreamDownloadButtonTest*' --tests '*StreamSourceVerificationTest*' :androidApp:assembleFullRelease -Pkotlin.compiler.execution.strategy=in-process -PreleaseMinifyEnabled=false --max-workers=1 --no-configuration-cache --no-daemon
           mkdir -p dist
           build_tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
           for apk in androidApp/build/outputs/apk/full/release/*.apk; do
@@ -67,6 +68,14 @@ jobs:
             sha256sum "$target" > "$target.sha256"
           done
           test "$(find dist -name '*.apk' | wc -l)" = 5
+          mkdir -p build/upgrade-132
+          gh release download 1.32 --repo "$GITHUB_REPOSITORY" --pattern BOATFLIX-Android-universal-1.32.apk --pattern BOATFLIX-Android-universal-1.32.apk.sha256 --dir build/upgrade-132
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p = Path('build/upgrade-132/BOATFLIX-Android-universal-1.32.apk')
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == Path(str(p)+'.sha256').read_text().split()[0]
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: BOATFLIX-Android-${{ env.RELEASE_VERSION }}
@@ -87,7 +96,9 @@ jobs:
           disk-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: bash .github/scripts/run-android-fork-qa.sh
+          script: |
+            bash .github/scripts/test-boatflix-android-upgrade.sh
+            bash .github/scripts/run-android-fork-qa.sh
       - name: Preserve mobile device test reports
         run: |
           mkdir -p mobile-qa
@@ -134,6 +145,9 @@ jobs:
             androidApp/build/reports/androidTests
             androidApp/build/outputs/androidTest-results
             android-seed.log
+            android-pack-seed.log
+            android-pack-fixture.json
+            build/upgrade-qa
             android-qa-logcat.txt
             android-ui-screenshots
             mobile-qa

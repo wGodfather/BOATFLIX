@@ -2,7 +2,7 @@
 
 Ana depo: https://github.com/wGodfather/BOATFLIX. Ana dal: `main`.
 Sürüm `composeApp/Configuration/DesktopVersion.properties` içinde tanımlanır.
-Güncel sürüm `1.32`, derleme kodu `132` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
+Güncel sürüm `1.33`, derleme kodu `133` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
 
 ## Bağımsız kimlik
 

@@ -43,6 +43,22 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.8'
+          cache-dependency-path: tools/torrent-pack-peer/go.sum
+      - name: Generated torrent fixture transport
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          Push-Location tools/torrent-pack-peer
+          try {
+            go build -o ../../build/torrent-pack-peer.exe .
+            if ($LASTEXITCODE -ne 0) { throw 'Fixture transport compilation failed' }
+          } finally { Pop-Location }
       - name: İsteğe bağlı hizmet ayarları
         shell: pwsh
         run: |
@@ -65,7 +81,7 @@ jobs:
           $env:APPDATA="$env:RUNNER_TEMP/boatflix-tests/roaming"
           $env:LOCALAPPDATA="$env:RUNNER_TEMP/boatflix-tests/local"
           $env:BOATFLIX_STORAGE_ISOLATION_TEST="true"
-          .\gradlew.bat :composeApp:desktopTest --tests '*DesktopStorageTest*' --tests '*AppUrlBridgeTest*' --tests '*TmdbCatalogTransportTest*' --tests '*SearchCatalogIntegrationTest*' --tests '*CatalogPaginationStateTest*' --tests '*SearchRequestStateTest*' --tests '*StreamSourceVerificationTest*' --tests '*DesktopStreamSourceVerifierTest*' --tests '*DesktopHlsDownloadTest*' --tests '*StreamParserTest*' --tests '*PluginRuntimeDesktopTest*' --tests '*StreamListingPolicyTest*' --tests '*StreamsContextMenuTest*' :composeApp:packageMsi "-Pnuvio.webview2.dir=$env:WEBVIEW2_ROOT" "-Pcompose.desktop.packaging.checkJdkVendor=false" "-Pkotlin.compiler.execution.strategy=in-process" --max-workers=1 --no-configuration-cache --no-daemon --stacktrace
+          .\gradlew.bat :composeApp:desktopTest --tests '*DesktopStorageTest*' --tests '*AppUrlBridgeTest*' --tests '*TmdbCatalogTransportTest*' --tests '*SearchCatalogIntegrationTest*' --tests '*CatalogPaginationStateTest*' --tests '*SearchRequestStateTest*' --tests '*StreamSourceVerificationTest*' --tests '*DesktopStreamSourceVerifierTest*' --tests '*DesktopHlsDownloadTest*' --tests '*StreamParserTest*' --tests '*PluginRuntimeDesktopTest*' --tests '*StreamListingPolicyTest*' --tests '*StreamsContextMenuTest*' --tests '*TorrentFileSelectionTest*' --tests '*TorrentDownloadPartialTest*' --tests '*DesktopTorrentEpisodePackTest*' :composeApp:packageMsi "-Pnuvio.webview2.dir=$env:WEBVIEW2_ROOT" "-Pcompose.desktop.packaging.checkJdkVendor=false" "-Pkotlin.compiler.execution.strategy=in-process" --max-workers=1 --no-configuration-cache --no-daemon --stacktrace
           if ($LASTEXITCODE -ne 0) { throw "Test veya paketleme başarısız" }
           $msi="composeApp/build/compose/release-msis/BOATFLIX-Windows-x64-$env:RELEASE_VERSION.msi"
           if (-not (Test-Path $msi)) { throw "Windows kurulum dosyası bulunamadı" }
@@ -75,6 +91,17 @@ jobs:
           name: BOATFLIX-Windows-${{ env.RELEASE_VERSION }}
           path: composeApp/build/compose/release-msis/*
           if-no-files-found: error
+      - name: Upgrade from published BOATFLIX 1.32
+        shell: pwsh
+        run: ./.github/scripts/test-boatflix-msi-upgrade.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: BOATFLIX-Windows-QA-${{ env.RELEASE_VERSION }}
+          path: |
+            composeApp/build/test-results/desktopTest
+            build/torrent-pack-qa
+            build/boatflix-msi-qa
       - name: Taslak sürüm
         if: inputs.create_draft
         shell: pwsh

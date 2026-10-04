@@ -18,7 +18,7 @@ jobs:
       matrix:
         target: [android-tv, google-tv]
     env:
-      RELEASE_VERSION: '1.32'
+      RELEASE_VERSION: '1.33'
       TV_ABI: x86_64
     steps:
       - uses: actions/checkout@v6
@@ -33,7 +33,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - uses: actions/download-artifact@v4
         with:
-          name: BOATFLIX-Android-1.32
+          name: BOATFLIX-Android-1.33
           path: dist
           github-token: ${{ github.token }}
           run-id: ${{ inputs.build_run }}
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: BOATFLIX-${{ matrix.target }}-QA-1.32
+          name: BOATFLIX-${{ matrix.target }}-QA-1.33
           path: |
             tv-qa
             androidApp/build/reports/androidTests
