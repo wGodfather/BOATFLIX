@@ -4,11 +4,13 @@ if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hoste
 }
 $qa = Join-Path (Get-Location) 'build/boatflix-msi-qa'
 New-Item -ItemType Directory -Path $qa -Force | Out-Null
-gh release download 1.32 --repo $env:GITHUB_REPOSITORY --pattern 'BOATFLIX-Windows-x64-1.32.msi*' --dir $qa
+gh release download 1.32 --repo $env:GITHUB_REPOSITORY --pattern 'BOATFLIX-Windows-x64-1.32.msi' --pattern 'SHA256SUMS.txt' --dir $qa
 if ($LASTEXITCODE -ne 0) { throw 'Previous published installer could not be downloaded.' }
 $old = Join-Path $qa 'BOATFLIX-Windows-x64-1.32.msi'
 $current = Join-Path (Get-Location) "composeApp/build/compose/release-msis/BOATFLIX-Windows-x64-$env:RELEASE_VERSION.msi"
-$expected = (Get-Content -LiteralPath "$old.sha256" -Raw).Trim().Split()[0]
+$checksumLine = Get-Content -LiteralPath (Join-Path $qa 'SHA256SUMS.txt') | Where-Object { ($_ -split '\s+', 2)[1] -eq 'BOATFLIX-Windows-x64-1.32.msi' }
+if (@($checksumLine).Count -ne 1) { throw 'Previous MSI checksum entry is missing or ambiguous.' }
+$expected = ($checksumLine -split '\s+', 2)[0]
 if ((Get-FileHash -LiteralPath $old -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Previous MSI checksum mismatch.' }
 function Read-MsiProperties([string]$path) {
     $installer = New-Object -ComObject WindowsInstaller.Installer

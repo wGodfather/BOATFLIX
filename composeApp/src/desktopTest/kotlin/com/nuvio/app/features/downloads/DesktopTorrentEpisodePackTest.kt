@@ -46,7 +46,15 @@ class DesktopTorrentEpisodePackTest {
         }.start()
         val handles = mutableListOf<DownloadsTaskHandle>()
         var bridge: Process? = null
+        val previousBinary = System.getProperty("nuvio.torrserver.binary")
         try {
+            if (System.getenv("RUNNER_OS") == "Linux") {
+                // desktopTest uses classes/resources, not desktopJar, where this
+                // same shipped Linux binary is added. Resolve its repository path.
+                val binary = File(root, "composeApp/src/desktopMain/torrserver/linux-amd64/TorrServer")
+                assertTrue(binary.isFile && binary.length() > 1024)
+                System.setProperty("nuvio.torrserver.binary", binary.absolutePath)
+            }
             val data = withTimeout(15_000) {
                 var parsed: kotlinx.serialization.json.JsonObject? = null
                 while (parsed == null) {
@@ -110,6 +118,8 @@ class DesktopTorrentEpisodePackTest {
         } finally {
             handles.forEach { it.cancel() }
             P2pStreamingEngine.shutdown()
+            if (previousBinary == null) System.clearProperty("nuvio.torrserver.binary")
+            else System.setProperty("nuvio.torrserver.binary", previousBinary)
             seed.destroy()
             if (!seed.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) seed.destroyForcibly()
             bridge?.destroy()

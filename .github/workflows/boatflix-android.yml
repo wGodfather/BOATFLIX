@@ -69,12 +69,13 @@ jobs:
           done
           test "$(find dist -name '*.apk' | wc -l)" = 5
           mkdir -p build/upgrade-132
-          gh release download 1.32 --repo "$GITHUB_REPOSITORY" --pattern BOATFLIX-Android-universal-1.32.apk --pattern BOATFLIX-Android-universal-1.32.apk.sha256 --dir build/upgrade-132
+          gh release download 1.32 --repo "$GITHUB_REPOSITORY" --pattern BOATFLIX-Android-universal-1.32.apk --pattern SHA256SUMS.txt --dir build/upgrade-132
           python3 - <<'PY'
           from pathlib import Path
           import hashlib
           p = Path('build/upgrade-132/BOATFLIX-Android-universal-1.32.apk')
-          assert hashlib.sha256(p.read_bytes()).hexdigest() == Path(str(p)+'.sha256').read_text().split()[0]
+          sums = dict((name, digest) for digest, name in (line.split(maxsplit=1) for line in (p.parent/'SHA256SUMS.txt').read_text().splitlines()))
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == sums[p.name]
           PY
       - uses: actions/upload-artifact@v4
         with:
