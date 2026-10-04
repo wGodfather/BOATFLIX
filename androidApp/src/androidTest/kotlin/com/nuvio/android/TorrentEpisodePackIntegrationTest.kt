@@ -28,7 +28,7 @@ class TorrentEpisodePackIntegrationTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val args = InstrumentationRegistry.getArguments()
 
-    @Test fun samePackAndStaleHintsProduceDistinctEpisodesForPlaybackAndDownloads() {
+    @Test(timeout = 180_000) fun samePackAndStaleHintsProduceDistinctEpisodesForPlaybackAndDownloads() {
         val magnet = args.getString("packMagnet")
         val tracker = args.getString("packTracker")
         val hash8 = args.getString("packSha8")

@@ -2,6 +2,7 @@
 set -euo pipefail
 mkdir -p tv-qa
 fixture=tv-qa/episode-fixture.json
+python3 -c 'from pathlib import Path; Path("tv-qa/episode-fixture.json").unlink(missing_ok=True)'
 NUVIO_QA_EPISODE_PACK=1 NUVIO_QA_FIXTURE_OUTPUT="$fixture" python3 -u tools/qa_torrent_seed.py > tv-qa/episode-seed.log 2>&1 &
 seed_pid=$!
 trap 'kill "$seed_pid" 2>/dev/null || true' EXIT
