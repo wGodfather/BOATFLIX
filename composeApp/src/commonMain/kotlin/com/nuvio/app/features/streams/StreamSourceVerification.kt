@@ -26,6 +26,18 @@ internal expect object StreamSourceVerifier {
     suspend fun verify(stream: StreamItem, context: StreamVerificationContext): StreamItem?
 }
 
+/** List complete provider candidates without downloading torrent pieces just to show a row. */
+internal fun StreamItem.hasCompleteTorrentListingMetadata(context: StreamVerificationContext): Boolean =
+    isTorrentStream && StreamListingPolicy.beforeVerification(this) && StreamListingPolicy.isVisible(this) &&
+        listOfNotNull(behaviorHints.filename, title, name).any { matchesVerifiedContent(it, context) }
+
+internal suspend fun prepareStreamForListing(
+    stream: StreamItem,
+    context: StreamVerificationContext,
+    verify: suspend (StreamItem, StreamVerificationContext) -> StreamItem? = StreamSourceVerifier::verify,
+): StreamItem? =
+    if (stream.hasCompleteTorrentListingMetadata(context)) stream else verify(stream, context)
+
 internal fun parseStreamSizeBytes(text: String?): Long? {
     val match = Regex("(?i)([0-9]+(?:[.,][0-9]+)?)\\s*(TiB|GiB|MiB|KiB|TB|GB|MB|KB|B)\\b")
         .find(text.orEmpty()) ?: return null

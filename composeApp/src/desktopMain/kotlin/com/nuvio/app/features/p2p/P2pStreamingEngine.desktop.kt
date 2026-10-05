@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -340,33 +342,54 @@ actual object P2pStreamingEngine {
         "udp://tracker.torrent.eu.org:451/announce",
     )
 
-    private class TorrServerBinary {
+    internal class TorrServerBinary(
+        private val preferredPort: Int = 8092,
+        private val configDirectory: File = DesktopStorage.rootDir.resolve("torrserver").toFile(),
+    ) {
         private val log = Logger.withTag("TorrServerBinary")
         private val healthClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(2))
             .build()
-        private var process: Process? = null
+        private val lifecycleMutex = Mutex()
+        @Volatile private var process: Process? = null
+        @Volatile private var port: Int = preferredPort
 
-        val baseUrl: String get() = "http://127.0.0.1:$PORT"
+        val baseUrl: String get() = "http://127.0.0.1:$port"
+        internal val ownedProcessId: Long? get() = process?.takeIf { it.isAlive }?.pid()
 
         suspend fun start() = withContext(Dispatchers.IO) {
+            lifecycleMutex.withLock { startLocked() }
+        }
+
+        private suspend fun startLocked() {
             if (isRunning()) {
-                log.d { "TorrServer already running" }
-                return@withContext
+                log.d { "Owned TorrServer already running on port $port" }
+                return
             }
 
-            killOrphanedProcess()
+            stopOwnedProcess()
+            // Never reuse or shut down Nuvio's server, or another BOATFLIX instance.
+            // A busy preferred port gets a separate loopback port for this process.
+            port = availableLoopbackPort(preferredPort)
 
             val binaryFile = resolveBinaryFile()
             if (!binaryFile.canExecute()) {
                 binaryFile.setExecutable(true)
             }
 
-            val configDir = DesktopStorage.rootDir.resolve("torrserver").toFile().also { it.mkdirs() }
+            // bbolt locks config.db for the lifetime of the server. Different ports
+            // must also have different databases, including an old server still
+            // running directly in the storage root after an application upgrade.
+            val configDir = configDirectory.resolve("instances/$port").also { it.mkdirs() }
+            val settings = configDir.resolve("settings.json")
+            val previousSettings = configDirectory.resolve("settings.json")
+            if (!settings.exists() && previousSettings.isFile) {
+                previousSettings.copyTo(settings)
+            }
             val processBuilder = ProcessBuilder(
                 binaryFile.absolutePath,
                 "--port",
-                PORT.toString(),
+                port.toString(),
                 "--ip",
                 "127.0.0.1",
                 "--path",
@@ -375,7 +398,7 @@ actual object P2pStreamingEngine {
             processBuilder.directory(configDir)
             processBuilder.redirectErrorStream(true)
 
-            log.d { "Starting TorrServer on port $PORT from ${binaryFile.absolutePath}" }
+            log.d { "Starting owned TorrServer on port $port from ${binaryFile.absolutePath}" }
             process = processBuilder.start()
 
             val proc = process!!
@@ -387,7 +410,7 @@ actual object P2pStreamingEngine {
                 } catch (_: Exception) {
                 }
             }.apply {
-                name = "nuvio-torrserver-output"
+                name = "boatflix-torrserver-output"
                 isDaemon = true
                 start()
             }
@@ -396,7 +419,7 @@ actual object P2pStreamingEngine {
             while (System.currentTimeMillis() < deadline) {
                 if (isRunning()) {
                     log.d { "TorrServer started successfully" }
-                    return@withContext
+                    return
                 }
                 if (!isProcessAlive(process)) {
                     val exitCode = process?.exitValue() ?: -1
@@ -406,23 +429,34 @@ actual object P2pStreamingEngine {
                 delay(HEALTH_CHECK_INTERVAL_MS)
             }
 
-            stop()
+            stopOwnedProcess()
             throw P2pStreamingException("TorrServer failed to start within ${STARTUP_TIMEOUT_MS / 1000}s")
         }
 
-        fun isRunning(): Boolean =
-            try {
+        fun isRunning(): Boolean {
+            if (process?.isAlive != true) return false
+            return try {
                 val request = HttpRequest.newBuilder(URI.create("$baseUrl/echo"))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build()
                 val response = healthClient.send(request, HttpResponse.BodyHandlers.discarding())
-                response.statusCode() in 200..299
+                response.statusCode() in 200..299 && process?.isAlive == true
             } catch (_: Exception) {
                 false
             }
+        }
 
-        fun stop() {
+        fun stop() = runBlocking(Dispatchers.IO) {
+            lifecycleMutex.withLock { stopOwnedProcess() }
+        }
+
+        private fun stopOwnedProcess() {
+            val proc = process ?: return
+            if (!proc.isAlive) {
+                process = null
+                return
+            }
             try {
                 val request = HttpRequest.newBuilder(URI.create("$baseUrl/shutdown"))
                     .timeout(Duration.ofSeconds(5))
@@ -432,30 +466,15 @@ actual object P2pStreamingEngine {
             } catch (_: Exception) {
             }
 
-            process?.let { proc ->
-                try {
-                    if (!proc.waitFor(3_000L, TimeUnit.MILLISECONDS) && isProcessAlive(proc)) {
-                        proc.destroyForcibly()
-                    }
-                } catch (_: Exception) {
+            try {
+                if (!proc.waitFor(3_000L, TimeUnit.MILLISECONDS) && isProcessAlive(proc)) {
                     proc.destroyForcibly()
                 }
+            } catch (_: Exception) {
+                proc.destroyForcibly()
             }
             process = null
             log.d { "TorrServer stopped" }
-        }
-
-        private fun killOrphanedProcess() {
-            try {
-                val request = HttpRequest.newBuilder(URI.create("$baseUrl/shutdown"))
-                    .timeout(Duration.ofSeconds(5))
-                    .GET()
-                    .build()
-                healthClient.send(request, HttpResponse.BodyHandlers.discarding())
-                Thread.sleep(1_000L)
-                log.d { "Shut down orphaned TorrServer instance" }
-            } catch (_: Exception) {
-            }
         }
 
         private fun isProcessAlive(proc: Process?): Boolean =
@@ -527,7 +546,6 @@ actual object P2pStreamingEngine {
         }
 
         companion object {
-            const val PORT = 8091
             private const val STARTUP_TIMEOUT_MS = 15_000L
             private const val HEALTH_CHECK_INTERVAL_MS = 200L
         }

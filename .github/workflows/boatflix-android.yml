@@ -1,7 +1,24 @@
 name: BOATFLIX Android and TV
 
 on:
+  workflow_call:
+    inputs:
+      run_tv_qa:
+        type: boolean
+        default: true
+      run_tablet_qa:
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      run_tv_qa:
+        description: Android TV ve Google TV testlerini çalıştır
+        type: boolean
+        default: true
+      run_tablet_qa:
+        description: Tablet kitaplık ve indirme arayüzünü test et
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -68,18 +85,19 @@ jobs:
             sha256sum "$target" > "$target.sha256"
           done
           test "$(find dist -name '*.apk' | wc -l)" = 5
-          mkdir -p build/upgrade-132
-          gh release download 1.32 --repo "$GITHUB_REPOSITORY" --pattern BOATFLIX-Android-universal-1.32.apk --pattern SHA256SUMS.txt --dir build/upgrade-132
+          mkdir -p build/upgrade-133
+          gh release download 1.33 --repo "$GITHUB_REPOSITORY" --pattern BOATFLIX-Android-universal-1.33.apk --pattern SHA256SUMS.txt --dir build/upgrade-133
           python3 - <<'PY'
           from pathlib import Path
           import hashlib
-          p = Path('build/upgrade-132/BOATFLIX-Android-universal-1.32.apk')
+          p = Path('build/upgrade-133/BOATFLIX-Android-universal-1.33.apk')
           sums = dict((name, digest) for digest, name in (line.split(maxsplit=1) for line in (p.parent/'SHA256SUMS.txt').read_text().splitlines()))
           assert hashlib.sha256(p.read_bytes()).hexdigest() == sums[p.name]
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: BOATFLIX-Android-${{ env.RELEASE_VERSION }}
+          overwrite: true
           path: dist/*
           if-no-files-found: error
       - name: Enable emulator acceleration
@@ -104,7 +122,31 @@ jobs:
         run: |
           mkdir -p mobile-qa
           cp -a androidApp/build/outputs/androidTest-results mobile-qa/
+      - name: Tablet library and downloads
+        if: inputs.run_tablet_qa
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: default
+          arch: x86_64
+          profile: pixel_c
+          ram-size: 2048M
+          disk-size: 4096M
+          force-avd-creation: true
+          avd-name: boatflix-tablet
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            ./gradlew :androidApp:connectedFullDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.nuvio.android.LibraryDownloadsUiTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pkotlin.compiler.execution.strategy=in-process --max-workers=1 --no-configuration-cache --no-daemon
+            mkdir -p tablet-qa
+            adb pull /sdcard/Android/data/com.wgodfather.boatflix.debug/files/fork-ui-qa/library-downloads.png tablet-qa/
+      - name: Preserve tablet device test reports
+        if: inputs.run_tablet_qa
+        run: |
+          mkdir -p tablet-qa
+          cp -a androidApp/build/outputs/androidTest-results tablet-qa/
       - name: Android TV launcher and remote navigation
+        if: inputs.run_tv_qa
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
@@ -119,10 +161,12 @@ jobs:
           disable-animations: true
           script: bash .github/scripts/run-boatflix-tv-qa.sh
       - name: Preserve Android TV device test reports
+        if: inputs.run_tv_qa
         run: |
           cp -a tv-qa android-tv-qa
           cp -a androidApp/build/outputs/androidTest-results android-tv-qa/
       - name: Google TV launcher and remote navigation
+        if: inputs.run_tv_qa
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
@@ -141,6 +185,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BOATFLIX-Android-QA-${{ env.RELEASE_VERSION }}
+          overwrite: true
           path: |
             composeApp/build/test-results/testAndroidHostTest
             androidApp/build/reports/androidTests
@@ -152,5 +197,6 @@ jobs:
             android-qa-logcat.txt
             android-ui-screenshots
             mobile-qa
+            tablet-qa
             android-tv-qa
             tv-qa

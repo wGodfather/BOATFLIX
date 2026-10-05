@@ -2,7 +2,7 @@
 
 Ana depo: https://github.com/wGodfather/BOATFLIX. Ana dal: `main`.
 Sürüm `composeApp/Configuration/DesktopVersion.properties` içinde tanımlanır.
-Güncel sürüm `1.33`, derleme kodu `133` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
+Güncel sürüm `1.36`, derleme kodu `136` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
 
 ## Bağımsız kimlik
 
@@ -57,3 +57,16 @@ macOS ve iOS bu yayına dahil değildir.
 Özgün projenin teknik paket/kaynak kod adları derleme uyumluluğu için yer yer korunur.
 Simge kaynağı ve tekrar üretim aracı `assets/branding/` içindedir.
 Kaynak kod GPL-3.0 lisansındadır; `LICENSE` ve `UPSTREAM_README.md` korunur.
+
+## 1.36 entegrasyonu ve yayın
+
+1.36, yayımlanmış 1.33 ana dalı üzerine kaynak listeleme ve eklenti süre sınırı düzeltmelerini birleştirir.
+Başlık/yıl/bölüm, boyut, çözünürlük ve seeder bilgisi yeterli olan torrentler parçalar indirilmeden listelenir; `verifiedMedia` doldurulmaz. Eksik bilgili torrentler ve doğrudan kaynaklar ölçüm yolunu kullanır.
+`setTimeout`, `clearTimeout`, `AbortController` ve `AbortSignal.timeout` eklenti çalışma ortamında desteklenir; masaüstünde iptal gerçek HTTP isteğine iletilir.
+Masaüstü torrent sunucusu yalnızca kendi sürecini yönetir; tercih edilen 8092 portu doluysa boş port seçer ve veritabanını `torrserver/instances/<port>` altında tutar.
+1.33'ün ortak bölüm dosyası seçim politikası doğrulama, oynatma ve indirmede korunur.
+
+**BOATFLIX Windows and Mobile Release** iş akışı Windows ve Android telefon/tablet paketlerini aynı committen üretir.
+Dal üzerinde yalnızca test/derleme; `main` üzerinde bütün testler geçtikten sonra 1.36 yayını yapılır.
+Windows gerçek torrent paketi ve MSI 1.33 yükseltmesi, Android aynı imzalı 1.33 yükseltmesi, telefon ve tablet emülatör testleri zorunludur. TV/Linux yayın işleri bu sürümde çağrılmaz; mevcut destek kodu korunur.
+Yayınlanan paketler üzerine yazılmaz. Kaynak SHA, imza, test raporu ve sağlama değerleri yayına eklenir.

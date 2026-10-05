@@ -1,40 +1,29 @@
-# BOATFLIX 1.33
+# BOATFLIX 1.36 — Windows ve Mobil
 
-Torrent sezon paketlerinde doğru bölümün oynatılması ve indirilmesi düzeltildi.
+1.33 sürümündeki bölüm seçme, oynatma ve indirme düzeltmeleri korunarak kaynak listeleme ve eklenti bekleme düzeltmeleri entegre edildi.
 
-- Aynı torrent farklı bölümlerde kullanıldığında istenen sezon/bölümün gerçek dosyası seçilir.
-- Kaynağın eski veya yanlış dosya indeksi, eşleşen bölüm dosyasını geçersiz kılamaz.
-- Bölüm bulunamazsa başka bölümün en büyük videosu açılmaz; açıklayıcı hata gösterilir.
-- Bölüm değiştiğinde oynatma akışı yeniden çözülür.
-- Yanlış dosyaya ait eski yarım torrent indirmeleri güvenli biçimde baştan başlar.
-- Önceden yanlış tamamlanan videolar değiştirilmez; güncellemeden sonra yeniden indirilmelidir.
-- BOATFLIX uygulama kimliği, imzası, simgesi ve kullanıcı verilerinin konumu korunur.
-- Sürüm 1.33, Android derleme kodu 133. Bu güncelleme VPN özelliği eklemez.
+- Windows'ta bilgisi yeterli olan torrent kaynakları, torrent parçalarını indirme ve video analizini beklemeden listelenir.
+- Eksik bilgili veya yavaş bir kaynak diğer hazır sonuçların görünmesini engellemez.
+- Eklentilerin `setTimeout`, `clearTimeout`, `AbortController` ve `AbortSignal.timeout` desteği tamamlandı; masaüstünde iptal edilen HTTP isteği gerçekten durdurulur.
+- BOATFLIX torrent sunucusu, Nuvio'dan ve eski sunucuların kilitli veritabanlarından ayrılır.
+- Sezon paketlerinde istenen bölüm seçilir; eski dosya indeksi başka bir bölümü oynatamaz veya indiremez.
+- Eksik bölümde açıklayıcı hata, bölüm değiştiğinde akışın yeniden çözülmesi ve yanlış yarım indirmenin yeniden başlaması korunur.
+- Kaynakların çözünürlük, boyut, seeder ve içerik eşleştirme kuralları korunur. Sağlayıcı bilgisiyle listelenen torrentler ölçülmüş/doğrulanmış video olarak işaretlenmez.
+- Uygulama kimliği, Windows yükseltme kimliği, Android imzası ve kullanıcı verilerinin konumu korunur. Sürüm 1.36, derleme kodu 136.
 
-Doğrulama: Windows 90, Linux 58, Android host 78 test geçti; telefon, Android TV ve Google TV emülatörlerinde toplam 8 cihaz testi geçti.
-Windows ve Android 1.32 → 1.33 yükseltmelerinde uygulama kimliği ve test verileri korundu.
-[Ayrıntılı doğrulama raporu](https://github.com/wGodfather/BOATFLIX/releases/download/1.33/QA_REPORT.md), paket kaynakları için `RELEASE_MANIFEST.json`, dosya bütünlüğü için `SHA256SUMS.txt` yayına eklenmiştir.
-
-## İndirme seçimi
+## İndir
 
 | Cihaz | Dosya |
 |---|---|
-| Windows x64 | `BOATFLIX-Windows-x64-1.33.msi` |
-| Linux x86_64 | `BOATFLIX-Linux-x86_64-1.33.AppImage`, `.deb`, `.rpm` veya `.flatpak` |
-| Android telefon / tablet | `BOATFLIX-Android-universal-1.33.apk` |
-| Android TV / Google TV | `BOATFLIX-Android-universal-1.33.apk` |
+| Windows x64 | `BOATFLIX-Windows-x64-1.36.msi` |
+| Android telefon / tablet | `BOATFLIX-Android-universal-1.36.apk` |
 
-Mobil ve TV tek bir imzalı APK kullanır. TV menüsünde BOATFLIX afişiyle görünür ve yatay açılır.
-Daha küçük indirme için cihazınıza uygun `arm64-v8a`, `armeabi-v7a`, `x86` veya `x86_64` APK'sını seçebilirsiniz.
-Mimariyi bilmiyorsanız evrensel APK'yı kullanın. Android 7.0 ve üstü gerekir.
-Android APK kurulumunda cihazınızda bilinmeyen kaynaklardan kuruluma izin verilmelidir.
+Daha küçük Android paketleri: `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`.
+Mimariden emin değilseniz evrensel APK'yı kullanın. Android 7.0 veya üstü gerekir.
+Bu yayının hedefleri Windows ve Android telefon/tablettir. Linux ve TV için önceki 1.33 yayını kullanılabilir.
+Önceden yanlış tamamlanmış bölüm dosyalarını güncellemeden sonra yeniden indirin.
 
-Linux DEB ve RPM gerekli libmpv/WebKitGTK bağımlılıklarını bildirir; AppImage bu sistem bileşenlerini gerektirir.
-Flatpak için Flatpak ve Flathub kurulumu gerekir; GNOME 50 çalışma ortamını kullanır.
-Linux ARM, macOS ve iOS paketleri bu yayına dahil değildir.
-
-Nuvio'daki veriler otomatik taşınmaz. Hesap senkronizasyonu için hizmet ayarları eklenmemiştir;
-paketler yerel/misafir kullanım için hazırlanır. Fiziksel TV cihazında test yapılmadı;
-TV başlatıcısı ve kitaplık sekmelerinde kumanda testleri emülatörde çalıştırılır.
-SHA-256 dosyaları paket bütünlüğünü kontrol etmek içindir.
+`QA_REPORT.md` test ve 1.33 → 1.36 yükseltme sonuçlarını; `RELEASE_MANIFEST.json` kaynak commitini, paket ve imza bilgilerini; `SHA256SUMS.txt` dosya sağlama değerlerini içerir.
+Windows bölüm paketi akış/indirme, kaynak listesi, eklenti süre sınırı ve sunucu yalıtımı testleri; Android host, telefon ve tablet emülatör testleri geçtikten sonra paketler aynı `main` commitinden yayımlanır.
+Hesap senkronizasyonu için hizmet ayarları eklenmemiştir; paketler yerel/misafir kullanım için hazırlanır.
 NuvioDesktop tabanlıdır; GPL-3.0 lisansı ve kaynak proje atıfları korunur.

@@ -13,6 +13,7 @@ internal object JsBindings {
 
             ${fetchPolyfill()}
             ${abortControllerPolyfill()}
+            ${timerPolyfill()}
             ${base64Polyfill()}
             ${urlPolyfill()}
             ${cryptoPolyfill()}
@@ -121,14 +122,46 @@ internal object JsBindings {
             return { kind: 'text', value: String(body) };
         }
 
+        var __fetch_request_counter = 0;
         var fetch = async function(url, options) {
             options = options || {};
             var method = (options.method || 'GET').toUpperCase();
             var headers = __normalize_fetch_headers(options.headers);
             var body = __normalize_fetch_body(options.body);
             var followRedirects = options.redirect !== 'manual';
-            var result = await __native_fetch(url, method, JSON.stringify(headers), body.kind, body.value, followRedirects);
+            var signal = options.signal;
+            if (signal && signal.aborted) {
+                var abortError = new Error('The request was aborted');
+                abortError.name = 'AbortError';
+                throw abortError;
+            }
+            var remainingMs = signal && signal.__fetchDeadlineMs !== undefined
+                ? Math.ceil(signal.__fetchDeadlineMs - Date.now()) : 0;
+            if (signal && signal.__fetchDeadlineMs !== undefined && remainingMs <= 0) {
+                var expiredError = new Error('Fetch timed out');
+                expiredError.name = 'TimeoutError';
+                throw expiredError;
+            }
+            var requestId = String(++__fetch_request_counter);
+            var onAbort = function() { __native_abort_fetch(requestId).catch(function() {}); };
+            if (signal && typeof signal.addEventListener === 'function') signal.addEventListener('abort', onAbort);
+            var result;
+            try {
+                result = await __native_fetch(url, method, JSON.stringify(headers), body.kind, body.value, followRedirects, remainingMs, requestId);
+            } finally {
+                if (signal && typeof signal.removeEventListener === 'function') signal.removeEventListener('abort', onAbort);
+            }
             var parsed = JSON.parse(result);
+            if (parsed.status === 0 && parsed.statusText === 'Fetch aborted') {
+                var abortedError = new Error('The request was aborted');
+                abortedError.name = 'AbortError';
+                throw abortedError;
+            }
+            if (parsed.status === 0 && parsed.statusText === 'Fetch timed out') {
+                var timeoutError = new Error('Fetch timed out');
+                timeoutError.name = 'TimeoutError';
+                throw timeoutError;
+            }
             var responseBytes = __fetch_base64_to_bytes(parsed.bodyBase64);
             return {
                 ok: parsed.ok,
@@ -160,6 +193,31 @@ internal object JsBindings {
         };
     """.trimIndent()
 
+    private fun timerPolyfill() = """
+        if (typeof setTimeout === 'undefined') {
+            var __timer_counter = 0;
+            var __timer_callbacks = {};
+            globalThis.setTimeout = function(callback, milliseconds) {
+                if (typeof callback !== 'function') throw new TypeError('Timer callback must be a function');
+                var id = ++__timer_counter;
+                var args = Array.prototype.slice.call(arguments, 2);
+                __timer_callbacks[id] = callback;
+                __native_timer(id, Math.max(0, Number(milliseconds) || 0)).then(function(fired) {
+                    var pending = __timer_callbacks[id];
+                    delete __timer_callbacks[id];
+                    if (fired && pending) pending.apply(globalThis, args);
+                });
+                return id;
+            };
+            globalThis.clearTimeout = function(id) {
+                if (__timer_callbacks[id]) {
+                    delete __timer_callbacks[id];
+                    __native_clear_timer(id).catch(function() {});
+                }
+            };
+        }
+    """.trimIndent()
+
     private fun abortControllerPolyfill() = """
         if (typeof AbortSignal === 'undefined') {
             var AbortSignal = function() { this.aborted = false; this.reason = undefined; this._listeners = []; };
@@ -179,6 +237,16 @@ internal object JsBindings {
                 return true;
             };
             globalThis.AbortSignal = AbortSignal;
+        }
+
+        if (typeof AbortSignal.timeout !== 'function') {
+            AbortSignal.timeout = function(milliseconds) {
+                milliseconds = Number(milliseconds);
+                if (!Number.isFinite(milliseconds) || milliseconds < 0) throw new RangeError('Invalid timeout');
+                var signal = new AbortSignal();
+                signal.__fetchDeadlineMs = Date.now() + milliseconds;
+                return signal;
+            };
         }
 
         if (typeof AbortController === 'undefined') {
