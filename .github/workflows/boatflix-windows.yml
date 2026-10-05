@@ -90,6 +90,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: BOATFLIX-Windows-${{ env.RELEASE_VERSION }}
+          overwrite: true
           path: composeApp/build/compose/release-msis/*
           if-no-files-found: error
       - name: Upgrade from published BOATFLIX 1.33
@@ -99,6 +100,7 @@ jobs:
         if: always()
         with:
           name: BOATFLIX-Windows-QA-${{ env.RELEASE_VERSION }}
+          overwrite: true
           path: |
             composeApp/build/test-results/desktopTest
             build/torrent-pack-qa

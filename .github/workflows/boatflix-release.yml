@@ -3,7 +3,7 @@ name: BOATFLIX Windows and Mobile Release
 on:
   workflow_dispatch:
   push:
-    branches: [main, fix/torrent-server-isolation]
+    branches: [main]
     paths:
       - composeApp/Configuration/DesktopVersion.properties
       - .github/workflows/boatflix-release.yml

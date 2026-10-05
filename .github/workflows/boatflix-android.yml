@@ -97,6 +97,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: BOATFLIX-Android-${{ env.RELEASE_VERSION }}
+          overwrite: true
           path: dist/*
           if-no-files-found: error
       - name: Enable emulator acceleration
@@ -136,7 +137,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: |
-            ./gradlew :androidApp:connectedFullDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.nuvio.android.LibraryDownloadsUiTest -Pkotlin.compiler.execution.strategy=in-process --max-workers=1 --no-configuration-cache --no-daemon
+            ./gradlew :androidApp:connectedFullDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.nuvio.android.LibraryDownloadsUiTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pkotlin.compiler.execution.strategy=in-process --max-workers=1 --no-configuration-cache --no-daemon
             mkdir -p tablet-qa
             adb pull /sdcard/Android/data/com.wgodfather.boatflix.debug/files/fork-ui-qa/library-downloads.png tablet-qa/
       - name: Preserve tablet device test reports
@@ -184,6 +185,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BOATFLIX-Android-QA-${{ env.RELEASE_VERSION }}
+          overwrite: true
           path: |
             composeApp/build/test-results/testAndroidHostTest
             androidApp/build/reports/androidTests
