@@ -2,7 +2,7 @@
 
 Ana depo: https://github.com/wGodfather/BOATFLIX. Ana dal: `main`.
 Sürüm `composeApp/Configuration/DesktopVersion.properties` içinde tanımlanır.
-Güncel kaynak sürümü `1.35`, derleme kodu `135` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
+Güncel sürüm `1.36`, derleme kodu `136` olur. Sonraki sürümlerde sürüm ve kod birlikte artırılır.
 
 ## Bağımsız kimlik
 
@@ -15,23 +15,6 @@ Güncel kaynak sürümü `1.35`, derleme kodu `135` olur. Sonraki sürümlerde s
 - Güncelleme deposu: `wGodfather/BOATFLIX`.
 
 Nuvio kimlikleri ve ayar klasörleriyle paylaşım yapılmaz. Nuvio verileri otomatik taşınmaz.
-
-1.33 masaüstünde torrent sunucusunu da ayırır: tercih edilen yerel port `8092` olur;
-bu port doluysa boş bir yerel port seçilir. Uygulama yalnızca kendi başlattığı sunucuyu
-kullanır ve kapatır. Eşzamanlı başlatma işlemleri sıralanır.
-1.34 her sunucunun veritabanını `torrserver/instances/<port>` altında ayırır.
-Eski sürümün kök klasörde açık tuttuğu `config.db` yeni sunucuyu engellemez;
-kök klasördeki `settings.json` ilk başlatmada yeni sunucu klasörüne kopyalanır.
-1.35 tam kaynak bilgisi olan torrentleri listeye eklemeden önce torrent parçaları
-indirmez. Başlık/yıl/bölüm eşleşmesi, bildirilen boyut, çözünürlük ve seeder eşikleri
-uygulanır. Bu adaylar ölçülmüş video gibi işaretlenmez; `verifiedMedia` doldurulmaz.
-Eksik bilgili torrentler ve doğrudan video kaynakları ölçüm yolunu kullanır.
-Eklentilerin `AbortSignal.timeout` süre sınırları yerel HTTP isteklerine uygulanır.
-`setTimeout`, `clearTimeout` ve `AbortController` ile iptal edilen istekler de desteklenir.
-Masaüstünde süre aşımında gerçek ağ isteği iptal edilir; yavaş alt kaynaklar BOAT'ın
-diğer sonuçlarını genel eklenti süre sınırına kadar bekletmez.
-Kaynak doğrulama ret nedenleri ayar klasöründeki `logs/source-verification.log` dosyasına
-yazılır. Bu dosya 1 MiB ile sınırlıdır; kaynak URL'leri ve istek başlıkları kaydedilmez.
 
 ## Windows derleme
 
@@ -74,3 +57,16 @@ macOS ve iOS bu yayına dahil değildir.
 Özgün projenin teknik paket/kaynak kod adları derleme uyumluluğu için yer yer korunur.
 Simge kaynağı ve tekrar üretim aracı `assets/branding/` içindedir.
 Kaynak kod GPL-3.0 lisansındadır; `LICENSE` ve `UPSTREAM_README.md` korunur.
+
+## 1.36 entegrasyonu ve yayın
+
+1.36, yayımlanmış 1.33 ana dalı üzerine kaynak listeleme ve eklenti süre sınırı düzeltmelerini birleştirir.
+Başlık/yıl/bölüm, boyut, çözünürlük ve seeder bilgisi yeterli olan torrentler parçalar indirilmeden listelenir; `verifiedMedia` doldurulmaz. Eksik bilgili torrentler ve doğrudan kaynaklar ölçüm yolunu kullanır.
+`setTimeout`, `clearTimeout`, `AbortController` ve `AbortSignal.timeout` eklenti çalışma ortamında desteklenir; masaüstünde iptal gerçek HTTP isteğine iletilir.
+Masaüstü torrent sunucusu yalnızca kendi sürecini yönetir; tercih edilen 8092 portu doluysa boş port seçer ve veritabanını `torrserver/instances/<port>` altında tutar.
+1.33'ün ortak bölüm dosyası seçim politikası doğrulama, oynatma ve indirmede korunur.
+
+**BOATFLIX Windows and Mobile Release** iş akışı Windows ve Android telefon/tablet paketlerini aynı committen üretir.
+Dal üzerinde yalnızca test/derleme; `main` üzerinde bütün testler geçtikten sonra 1.36 yayını yapılır.
+Windows gerçek torrent paketi ve MSI 1.33 yükseltmesi, Android aynı imzalı 1.33 yükseltmesi, telefon ve tablet emülatör testleri zorunludur. TV/Linux yayın işleri bu sürümde çağrılmaz; mevcut destek kodu korunur.
+Yayınlanan paketler üzerine yazılmaz. Kaynak SHA, imza, test raporu ve sağlama değerleri yayına eklenir.

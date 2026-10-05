@@ -1,0 +1,79 @@
+name: BOATFLIX Windows and Mobile Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, fix/torrent-server-isolation]
+    paths:
+      - composeApp/Configuration/DesktopVersion.properties
+      - .github/workflows/boatflix-release.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boatflix-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: version
+        name: Validate integrated version and 1.33 ancestry
+        run: |
+          git merge-base --is-ancestor 1.33 HEAD
+          version=$(sed -n 's/^VERSION_NAME=//p' composeApp/Configuration/DesktopVersion.properties | tr -d '\r')
+          code=$(sed -n 's/^VERSION_CODE=//p' composeApp/Configuration/DesktopVersion.properties | tr -d '\r')
+          test "$version" = 1.36
+          test "$code" = 136
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+  windows:
+    needs: version
+    uses: ./.github/workflows/boatflix-windows.yml
+    secrets: inherit
+  mobile:
+    needs: version
+    uses: ./.github/workflows/boatflix-android.yml
+    with:
+      run_tv_qa: false
+      run_tablet_qa: true
+    secrets: inherit
+  publish:
+    needs: [version, windows, mobile]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: BOATFLIX-*-${{ env.RELEASE_VERSION }}
+          path: release-input
+      - name: Validate packages and build release manifest
+        run: python3 .github/scripts/prepare-mobile-windows-release.py
+      - name: Publish validated Windows and mobile packages from main
+        run: |
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$GITHUB_SHA"
+          if gh release view "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'A release already exists; published packages are never overwritten.' >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_VERSION" release-dist/* --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --draft --title "BOATFLIX $RELEASE_VERSION — Windows ve Mobil" \
+            --notes-file RELEASE_NOTES_TR.md
+          gh release edit "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOATFLIX-Release-Manifest-${{ env.RELEASE_VERSION }}
+          path: |
+            release-dist/QA_REPORT.md
+            release-dist/RELEASE_MANIFEST.json
+            release-dist/SHA256SUMS.txt

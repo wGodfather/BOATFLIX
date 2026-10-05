@@ -18,6 +18,11 @@ test "$ready" = 1
   -Pandroid.testInstrumentationRunnerArguments.class=com.nuvio.android.BoatflixTvRemoteTest \
   -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true \
   -Pkotlin.compiler.execution.strategy=in-process --max-workers=1 --no-configuration-cache --no-daemon
+mkdir -p tv-qa/remote-tests
+cp -a androidApp/build/outputs/androidTest-results/. tv-qa/remote-tests/
+bash .github/scripts/run-episode-pack-qa.sh
+mkdir -p tv-qa/episode-tests
+cp -a androidApp/build/outputs/androidTest-results/. tv-qa/episode-tests/
 adb pull /sdcard/Android/data/com.wgodfather.boatflix.debug/files/fork-ui-qa tv-qa/screenshots
 adb install -r "dist/BOATFLIX-Android-${TV_ABI:-x86_64}-$RELEASE_VERSION.apk"
 adb shell cmd package query-activities --brief --components --query-flags 0 \

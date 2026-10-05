@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v4
         with:
-          name: BOATFLIX-Linux-1.32
+          name: BOATFLIX-Linux-1.33
           path: dist
           github-token: ${{ github.token }}
           run-id: ${{ inputs.build_run }}
@@ -25,14 +25,14 @@ jobs:
           bash scripts/linux/install-desktop-build-dependencies.sh xdotool imagemagick
           sudo mkdir -p /usr/share/desktop-directories
           (cd dist && sha256sum --check SHA256SUMS-Linux.txt)
-          sudo apt-get install -y "$PWD/dist/BOATFLIX-Linux-x86_64-1.32.deb"
+          sudo apt-get install -y "$PWD/dist/BOATFLIX-Linux-x86_64-1.33.deb"
           chmod +x dist/*.AppImage
       - name: Render DEB and AppImage windows and close cleanly
         run: |
           xvfb-run -a bash .github/scripts/smoke-linux-package.sh linux-qa/deb /opt/boatflix/bin/BOATFLIX
-          xvfb-run -a bash .github/scripts/smoke-linux-package.sh linux-qa/appimage dist/BOATFLIX-Linux-x86_64-1.32.AppImage --appimage-extract-and-run
+          xvfb-run -a bash .github/scripts/smoke-linux-package.sh linux-qa/appimage dist/BOATFLIX-Linux-x86_64-1.33.AppImage --appimage-extract-and-run
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: BOATFLIX-Linux-Rendered-QA-1.32
+          name: BOATFLIX-Linux-Rendered-QA-1.33
           path: linux-qa

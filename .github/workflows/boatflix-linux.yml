@@ -39,10 +39,21 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.8'
+          cache-dependency-path: tools/torrent-pack-peer/go.sum
+      - name: Generated torrent fixture transport
+        run: |
+          mkdir -p build
+          (cd tools/torrent-pack-peer && go build -o ../../build/torrent-pack-peer .)
       - name: Linux regression tests and three package formats
         run: |
           bash scripts/linux/test-linux-deb-tools.sh
-          xvfb-run -a ./gradlew :composeApp:desktopTest --tests '*LinuxUpdateInstallTest*' --tests '*AppUrlBridgeTest*' --tests '*DesktopStorageTest*' --tests '*SearchRequestStateTest*' --tests '*StreamParserTest*' :composeApp:packageReleaseDeb :composeApp:packageReleaseRpm :composeApp:packageReleaseAppImage -Pkotlin.compiler.execution.strategy=in-process -Pcompose.desktop.packaging.checkJdkVendor=false --max-workers=1 --no-configuration-cache --no-daemon --stacktrace
+          xvfb-run -a ./gradlew :composeApp:desktopTest --tests '*LinuxUpdateInstallTest*' --tests '*AppUrlBridgeTest*' --tests '*DesktopStorageTest*' --tests '*SearchRequestStateTest*' --tests '*StreamParserTest*' --tests '*TorrentFileSelectionTest*' --tests '*TorrentDownloadPartialTest*' --tests '*DesktopTorrentEpisodePackTest*' --tests '*DesktopStreamSourceVerifierTest.season pack verification*' :composeApp:packageReleaseDeb :composeApp:packageReleaseRpm :composeApp:packageReleaseAppImage -Pkotlin.compiler.execution.strategy=in-process -Pcompose.desktop.packaging.checkJdkVendor=false --max-workers=1 --no-configuration-cache --no-daemon --stacktrace
           mkdir -p dist
           cp composeApp/build/compose/binaries/main-release/deb/*.deb "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.deb"
           cp composeApp/build/compose/binaries/main-release/rpm/*.rpm "dist/BOATFLIX-Linux-x86_64-$RELEASE_VERSION.rpm"
@@ -74,6 +85,7 @@ jobs:
           name: BOATFLIX-Linux-QA-${{ env.RELEASE_VERSION }}
           path: |
             linux-qa
+            build/torrent-pack-qa
             composeApp/build/test-results/desktopTest
       - name: Reusable Linux app bundle for Flatpak
         run: tar -czf "$RUNNER_TEMP/boatflix-linux-app.tar.gz" -C composeApp/build/compose/binaries/main-release/app/BOATFLIX .

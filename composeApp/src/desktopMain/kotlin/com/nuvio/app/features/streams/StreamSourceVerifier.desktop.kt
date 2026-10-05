@@ -2,6 +2,9 @@ package com.nuvio.app.features.streams
 
 import com.nuvio.app.core.storage.DesktopStorage
 import com.nuvio.app.features.p2p.P2pStreamingEngine
+import com.nuvio.app.features.p2p.VerifiedTorrentFile
+import com.nuvio.app.features.p2p.TorrentSelectionFile
+import com.nuvio.app.features.p2p.selectTorrentFile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -145,10 +148,8 @@ internal actual object StreamSourceVerifier {
                 delay(500)
                 files = P2pStreamingEngine.torrentFiles(hash)
             }
-            val candidates = files.filter { it.length > 0 && it.path.substringAfterLast('.').lowercase() in setOf("mkv", "mp4", "avi", "webm", "ts", "m4v", "mov") && matchesVerifiedContent(it.path, context) }
-            val file = if (stream.p2pFileIdx != null) candidates.firstOrNull { it.id == stream.p2pFileIdx!! + 1 }
-                else candidates.maxByOrNull { it.length }
-            if (file == null) return rejected(stream, context,
+            val file = selectVerifiedTorrentFile(files, stream, context)
+                ?: return rejected(stream, context,
                 if (files.isEmpty()) "Torrent file metadata was not available within 25 seconds" else "No video file matched the requested title and episode")
             if (file.length < StreamListingPolicy.minimumTorrentBytes) return rejected(stream, context, "Torrent video is below the minimum file size")
             val media = probe(P2pStreamingEngine.getTorrentStreamUrl(hash, file.id), emptyMap())
@@ -212,6 +213,21 @@ internal actual object StreamSourceVerifier {
             process.inputStream.close()
         }
     }
+}
+
+/** Keep source verification, playback and download on the same episode selection policy. */
+internal fun selectVerifiedTorrentFile(
+    files: List<VerifiedTorrentFile>, stream: StreamItem, context: StreamVerificationContext,
+): VerifiedTorrentFile? {
+    val candidates = files.filter { it.length > 0 && matchesVerifiedContent(it.path, context) }
+    val selected = try {
+        selectTorrentFile(candidates.map { TorrentSelectionFile(it.id - 1, it.path, it.length) },
+            requestedIndex = stream.p2pFileIdx, filename = stream.behaviorHints.filename,
+            season = context.season, episode = context.episode)
+    } catch (_: IllegalStateException) {
+        return null
+    }
+    return candidates.firstOrNull { it.id == selected.index + 1 }
 }
 
 private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
