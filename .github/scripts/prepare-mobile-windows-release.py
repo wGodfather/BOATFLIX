@@ -85,6 +85,10 @@ shutil.copy2('LICENSE', out / 'LICENSE.txt')
     f'# BOATFLIX {version} doğrulaması\n\nKaynak: `{sha}` (`main`).\n\n'
     f'[Derleme ve test kayıtları]({manifest["workflow_run"]})\n\n'
     f'[Paket doğrulama ve yayın kayıtları]({manifest["publication_workflow_run"]})\n\n'
+    + (f'Yayın commiti: `{manifest["publication_commit"]}`. Test edilen kaynakla yayın commiti '
+       'arasındaki değişiklikler yalnızca `.github` altındaki yayın işlemlerindedir; '
+       'uygulama dosyalarının aynı olduğu yayın sırasında doğrulandı.\n\n'
+       if manifest['publication_commit'] != sha else '')
     + '\n'.join(f'- {label}: {value["tests"]} test, {value["skipped"]} atlandı.' for label, value in checks.items())
     + f'\n\n- {win_upgrade}\n- {android_upgrade}\n- {episode}\n\n'
     + 'Telefon ve tablet testleri emülatörlerde çalıştırıldı. 1.33 bölüm seçimi/indirme düzeltmeleri '

@@ -64,7 +64,7 @@ jobs:
             exit 1
           fi
           gh release create "$RELEASE_VERSION" release-dist/* --repo "$GITHUB_REPOSITORY" \
-            --target "$RELEASE_BUILD_SHA" --draft --title "BOATFLIX $RELEASE_VERSION — Windows ve Mobil" \
+            --target "$GITHUB_SHA" --draft --title "BOATFLIX $RELEASE_VERSION — Windows ve Mobil" \
             --notes-file RELEASE_NOTES_TR.md
           gh release edit "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest
       - uses: actions/upload-artifact@v4
