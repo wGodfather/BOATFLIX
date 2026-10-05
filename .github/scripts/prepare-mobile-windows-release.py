@@ -18,7 +18,10 @@ expected = [f'BOATFLIX-Windows-x64-{version}.msi'] + [
     f'BOATFLIX-Android-{abi}-{version}.apk'
     for abi in ['universal', 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64']
 ]
-found = [p for p in root.rglob('*') if p.suffix in ['.msi', '.apk']]
+package_roots = [root / f'BOATFLIX-{platform}-{version}' for platform in ['Windows', 'Android']]
+assert all(p.is_dir() for p in package_roots), 'Release package artifacts missing'
+found = [p for directory in package_roots for p in directory.rglob('*')
+         if p.suffix in ['.msi', '.apk']]
 assert sorted(p.name for p in found) == sorted(expected), 'Unexpected/missing release packages'
 packages = []
 for source in sorted(found):
