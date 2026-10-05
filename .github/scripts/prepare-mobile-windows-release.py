@@ -8,8 +8,8 @@ import shutil
 import xml.etree.ElementTree as ET
 
 version = os.environ['RELEASE_VERSION']
-sha = os.environ['GITHUB_SHA']
-run_id = os.environ['GITHUB_RUN_ID']
+sha = os.environ.get('RELEASE_BUILD_SHA', os.environ['GITHUB_SHA'])
+run_id = os.environ.get('RELEASE_BUILD_RUN_ID', os.environ['GITHUB_RUN_ID'])
 repo = os.environ['GITHUB_REPOSITORY']
 root = Path('release-input')
 out = Path('release-dist')
@@ -33,7 +33,8 @@ for source in sorted(found):
     if source.suffix == '.apk':
         signature = Path(str(source) + '.signature.txt').read_text()
         assert 'Verifies' in signature
-        cert = re.search(r'Signer #1 certificate SHA-256 digest: (\S+)', signature)
+        cert = re.search(r'^(?:Signer #1|V[234](?:\.\d+)? Signer):? certificate SHA-256 digest: ([0-9a-fA-F]{64})$',
+                         signature, re.MULTILINE)
         assert cert, 'APK signer certificate missing'
         manifest = Path(str(source) + '.manifest.txt').read_text()
         assert "name='com.wgodfather.boatflix'" in manifest
@@ -72,8 +73,10 @@ checks = dict(windows=counts('BOATFLIX-Windows-QA-*/composeApp/build/test-result
 for label in ['phone', 'tablet']:
     assert checks[label]['tests'] > 0 and checks[label]['skipped'] == 0
 manifest = dict(version=version, version_code=136, source_commit=sha, source_branch='main',
+                publication_commit=os.environ['GITHUB_SHA'],
                 source_url=f'https://github.com/{repo}/tree/{sha}', license='GPL-3.0',
                 workflow_run=f'https://github.com/{repo}/actions/runs/{run_id}',
+                publication_workflow_run=f'https://github.com/{repo}/actions/runs/{os.environ["GITHUB_RUN_ID"]}',
                 platforms=['Windows x64', 'Android phone/tablet'], packages=packages, tests=checks,
                 windows_upgrade=win_upgrade, android_upgrade=android_upgrade, episode_pack=episode)
 (out / 'RELEASE_MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n')
@@ -81,6 +84,7 @@ shutil.copy2('LICENSE', out / 'LICENSE.txt')
 (out / 'QA_REPORT.md').write_text(
     f'# BOATFLIX {version} doğrulaması\n\nKaynak: `{sha}` (`main`).\n\n'
     f'[Derleme ve test kayıtları]({manifest["workflow_run"]})\n\n'
+    f'[Paket doğrulama ve yayın kayıtları]({manifest["publication_workflow_run"]})\n\n'
     + '\n'.join(f'- {label}: {value["tests"]} test, {value["skipped"]} atlandı.' for label, value in checks.items())
     + f'\n\n- {win_upgrade}\n- {android_upgrade}\n- {episode}\n\n'
     + 'Telefon ve tablet testleri emülatörlerde çalıştırıldı. 1.33 bölüm seçimi/indirme düzeltmeleri '

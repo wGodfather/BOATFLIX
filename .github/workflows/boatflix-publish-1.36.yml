@@ -1,0 +1,76 @@
+name: Publish validated BOATFLIX 1.36 packages
+
+# Retry publication without rebuilding already tested, signed packages.
+# The tested commit must remain an ancestor of main and every file outside
+# .github must be identical. Package source and publication commits are recorded.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/boatflix-publish-1.36.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: boatflix-publish-1.36
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_VERSION: '1.36'
+      RELEASE_BUILD_SHA: 81ba0636b9b7c3ffed94ad95360d321e99ff0624
+      RELEASE_BUILD_RUN_ID: '37252208813'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify tested main commit and successful Windows/mobile jobs
+        run: |
+          git merge-base --is-ancestor 1.33 "$RELEASE_BUILD_SHA"
+          git merge-base --is-ancestor "$RELEASE_BUILD_SHA" HEAD
+          git diff --exit-code "$RELEASE_BUILD_SHA" HEAD -- . ':(exclude).github/**'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_BUILD_RUN_ID" > build-run.json
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_BUILD_RUN_ID/jobs?per_page=100" > build-jobs.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('build-run.json'))
+          assert run['head_sha'] == os.environ['RELEASE_BUILD_SHA']
+          assert run['head_branch'] == 'main' and run['event'] == 'push'
+          assert run['repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          jobs = json.load(open('build-jobs.json'))['jobs']
+          for name in ['version', 'windows / windows', 'mobile / android']:
+              matches = [j for j in jobs if j['name'] == name]
+              assert len(matches) == 1 and matches[0]['conclusion'] == 'success', name
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.RELEASE_BUILD_RUN_ID }}
+          pattern: BOATFLIX-*-${{ env.RELEASE_VERSION }}
+          path: release-input
+      - name: Validate signed packages, checksums and every test report
+        run: python3 .github/scripts/prepare-mobile-windows-release.py
+      - name: Publish validated packages from main
+        run: |
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$GITHUB_SHA"
+          if gh release view "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'A release already exists; published packages are never overwritten.' >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_VERSION" release-dist/* --repo "$GITHUB_REPOSITORY" \
+            --target "$RELEASE_BUILD_SHA" --draft --title "BOATFLIX $RELEASE_VERSION — Windows ve Mobil" \
+            --notes-file RELEASE_NOTES_TR.md
+          gh release edit "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOATFLIX-Release-Manifest-${{ env.RELEASE_VERSION }}
+          path: |
+            release-dist/QA_REPORT.md
+            release-dist/RELEASE_MANIFEST.json
+            release-dist/SHA256SUMS.txt
